@@ -11,11 +11,15 @@ const dbURI =
 
 mongoose
   .connect(dbURI, { useNewUrlParser: true, useUnifiedTopology: true })
-  .then((result) => console.log("db connected"))
+  .then((result) => console.log("DB is Live"))
   .catch((err) => console.log(err));
 
 app.use("/item", itemRouter);
 app.use("/bid", bidRouter);
+
+app.get('/',(req,res) => {
+  res.send('Running')
+})
 
 app.listen(8080, () => {
   console.log("Listenting on Port 8080");
