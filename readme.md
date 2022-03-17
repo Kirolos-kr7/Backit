@@ -23,6 +23,7 @@
 1. [Post] Add
 2. [Update] Edit
 3. [Delete] Delete
+4. [Post] Join
 
 ## Report
 

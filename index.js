@@ -1,6 +1,7 @@
 const express = require("express");
 const mongoose = require("mongoose");
 const itemRouter = require("./routes/item");
+const bidRouter = require("./routes/bid");
 
 const app = express();
 
@@ -14,6 +15,7 @@ mongoose
   .catch((err) => console.log(err));
 
 app.use("/item", itemRouter);
+app.use("/bid", bidRouter);
 
 app.listen(8080, () => {
   console.log("Listenting on Port 8080");

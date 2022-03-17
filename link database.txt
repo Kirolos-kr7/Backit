@@ -1,0 +1,2 @@
+pw: bidit8 user: bidit
+to linke with database: mongodb+srv://bidiy:bidit8@cluster0.ybuco.mongodb.net/myFirstDatabase?retryWrites=true&w=majority
