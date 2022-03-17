@@ -3,19 +3,19 @@ const Schema = mongoose.Schema;
 
 const bidSchema = new Schema(
   {
-    name: {
-      type: String,
+    item: {
+      type: Object,
       required: true,
     },
-    price: {
+    minPrice: {
       type: Number,
       required: true,
     },
-    start_date: {
+    startDate: {
       type: Date,
       required: true,
     },
-    end_date: {
+    endDate: {
       type: Date,
       required: true,
     },

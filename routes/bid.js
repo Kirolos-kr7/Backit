@@ -7,10 +7,15 @@ bidRouter.get("/add", async (req, res) => {
   // let { name, type, description, images } = req.body;
 
   let bid = {
-    name: "mario",
-    price: "0",
-    start_date: "Oct 18, 2022",
-    end_date: "Oct 20, 2022",
+    item: {
+      name: "mario",
+      type: 'human',
+      description: 'kjdfhjklflksafjadlsjlfsflkasjlksfd',
+      images: null
+    },
+    minPrice: 10000,
+    startDate: "Oct 18, 2022",
+    endDate: "Oct 20, 2022",
   };
 
   try {
