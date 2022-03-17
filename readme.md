@@ -14,7 +14,11 @@
 
 ## Item
 
+<<<<<<< HEAD
 1. [Post] Add [done]
+=======
+1. [Post] Add
+>>>>>>> 604451a1df19d9d386ce29a725f648a8936137e2
 2. [Update] Edit
 3. [Delete] Delete
 
