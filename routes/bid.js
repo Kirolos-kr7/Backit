@@ -30,14 +30,20 @@ bidRouter.get("/add", async (req, res) => {
 
 bidRouter.delete("/delete", async(req, res) => {
   const id = req.params.id;
-  Blog.findByIdAndDelete(id)
+  bids.findByIdAndDelete(id)
     .then(result => {
       res.json({ redirect: '/bids' });
     })
     .catch(err => {
       console.log(err);
     });
+    try {
+      await bidModel.delete(bid);
   
+      res.send({ message: "Delete bid successfully", ok: true });
+    } catch (err) {
+      res.send({ message: err, ok: false });
+    }
 });
 
 

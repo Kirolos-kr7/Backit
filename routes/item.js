@@ -22,7 +22,7 @@ itemRouter.get("/add", async (req, res) => {
   }
 });
 
-itemRouter.delete("/delete", async(req, res) => {
+itemRouter.delete("/:", async(req, res) => {
   const id = req.params.id;
   Blog.findByIdAndDelete(id)
     .then(result => {
@@ -31,7 +31,13 @@ itemRouter.delete("/delete", async(req, res) => {
     .catch(err => {
       console.log(err);
     });
+    try {
+      await bidModel.delete(item);
   
+      res.send({ message: "Delete item successfully", ok: true });
+    } catch (err) {
+      res.send({ message: err, ok: false });
+    }
 });
 
 
