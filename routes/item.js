@@ -22,4 +22,17 @@ itemRouter.get("/add", async (req, res) => {
   }
 });
 
+itemRouter.delete("/delete", async(req, res) => {
+  const id = req.params.id;
+  Blog.findByIdAndDelete(id)
+    .then(result => {
+      res.json({ redirect: '/items' });
+    })
+    .catch(err => {
+      console.log(err);
+    });
+  
+});
+
+
 module.exports = itemRouter;

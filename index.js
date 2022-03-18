@@ -14,6 +14,7 @@ mongoose
   .then((result) => console.log("DB is Live"))
   .catch((err) => console.log(err));
 
+//enter the tables
 app.use("/item", itemRouter);
 app.use("/bid", bidRouter);
 
