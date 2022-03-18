@@ -16,14 +16,13 @@
 
 1. [Post] Add [done]
 2. [Update] Edit
-3. [Delete] Delete
+3. [Delete] Delete [done]
 
 ## Bid
 
-1. [Post] Add
+1. [Post] Add [done]
 2. [Update] Edit
-3. [Delete] Delete
-4. [Post] Join
+3. [Delete] Delete [done]
 
 ## Report
 

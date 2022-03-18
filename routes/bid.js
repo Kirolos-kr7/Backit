@@ -13,7 +13,7 @@ bidRouter.get("/add", async (req, res) => {
       description: 'kjdfhjklflksafjadlsjlfsflkasjlksfd',
       images: null
     },
-    minPrice: 10000,
+    minPrice: 0,
     startDate: "Oct 18, 2022",
     endDate: "Oct 20, 2022",
   };
@@ -26,5 +26,20 @@ bidRouter.get("/add", async (req, res) => {
     res.send({ message: err, ok: false });
   }
 });
+
+
+bidRouter.delete("/delete", async(req, res) => {
+  const id = req.params.id;
+  Blog.findByIdAndDelete(id)
+    .then(result => {
+      res.json({ redirect: '/bids' });
+    })
+    .catch(err => {
+      console.log(err);
+    });
+  
+});
+
+
 
 module.exports = bidRouter;
