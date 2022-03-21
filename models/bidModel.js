@@ -4,8 +4,8 @@ const Schema = mongoose.Schema;
 const bidSchema = new Schema(
   {
     item: {
-      type: Object,
-      required: true,
+      type: String,
+      //required: true,
     },
     minPrice: {
       type: Number,
