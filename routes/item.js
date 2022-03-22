@@ -9,7 +9,7 @@ itemRouter.get("/add", async (req, res) => {
   let item = {
     name: "mario",
     type: "human",
-    description: "human with a donkey head",
+    description: "tall human",
     images: null,
   };
 
