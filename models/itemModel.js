@@ -19,7 +19,7 @@ const itemSchema = new Schema(
       type: Array,
       // required: true,
     },
-    uid: {
+    uID: {
       type: String,
       // required: true,
     },
