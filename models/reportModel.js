@@ -3,9 +3,9 @@ const { schema } = require('./itemModel');
 const Schema=mongoose.Schema;
 
 const reportSchema = new Schema({
-    id: {
+    uid: {
         type: String,
-        required: true
+       // required: true
     },
     type:{
         type:String,
