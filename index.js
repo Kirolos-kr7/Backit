@@ -25,6 +25,8 @@ app.get("/", (req, res) => {
   res.send("Running");
 });
 
-app.listen(8080, () => {
-  console.log("Listenting on Port 8080");
+let port = process.env.PORT || 8080;
+
+app.listen(port, () => {
+  console.log("Listenting on Port " + port);
 });
