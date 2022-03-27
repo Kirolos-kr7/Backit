@@ -1,24 +1,8 @@
 const express = require("express");
 const userModel = require("../models/userModel");
-const JOI = require("joi");
 const bcrypt = require("bcrypt");
-
-const registerSchema = JOI.object({
-  name: JOI.string().min(2).max(32).required(),
-  phone: JOI.string().min(4).required(),
-  email: JOI.string().email().required(),
-  address: JOI.string().min(2).required(),
-  password: JOI.string().pattern(new RegExp("^[a-zA-Z0-9]{3,30}$")).required(),
-  confirmPassword: JOI.ref("password"),
-  profilePicture: JOI.string().allow(null, ""),
-  gender: JOI.string().min(4).required(),
-  premium: JOI.object().allow(null, {}),
-});
-
-const loginSchema = JOI.object({
-  email: JOI.string().email().required(),
-  password: JOI.string().pattern(new RegExp("^[a-zA-Z0-9]{3,30}$")).required(),
-});
+const validator = require("validator");
+const jwt = require("jsonwebtoken");
 
 const authRouter = express.Router();
 
@@ -36,16 +20,30 @@ authRouter.post("/register", async (req, res) => {
   };
 
   try {
-    await registerSchema.validateAsync(user);
-  } catch (err) {
-    return res.send({ message: err.details[0].message, ok: false });
-  }
+    let isValid = await validator.isEmail(user.email);
+    if (!isValid)
+      return res.send({ message: "User Email is Invalid", ok: false });
 
-  try {
+    let isPasswordMatch = user.password === user.confirmPassword;
+    if (!isPasswordMatch)
+      return res.send({ message: "User Passwords Doesn't Match", ok: false });
+
+    let isRegistered = await userModel.findOne({ email: user.email });
+    if (isRegistered)
+      return res.send({ message: "User Already Exists", ok: false });
+
     bcrypt.hash(user.password, 10, async (err, hash) => {
       user.password = hash;
-      await userModel.create(user);
-      return res.send({ message: "User Registered Successfully", ok: true });
+      let thisUser = await userModel.create(user);
+      thisUser.password = undefined;
+
+      let token = createToken(thisUser);
+
+      return res.send({
+        token,
+        message: "User Registered Successfully",
+        ok: true,
+      });
     });
   } catch (err) {
     return res.send({ message: err, ok: false });
@@ -59,27 +57,37 @@ authRouter.post("/login", async (req, res) => {
   };
 
   try {
-    await loginSchema.validateAsync(user);
-  } catch (err) {
-    return res.send({ message: err.details[0].message, ok: false });
-  }
+    let isValid = await validator.isEmail(user.email);
+    if (!isValid)
+      return res.send({ message: "User Email is Invalid", ok: false });
 
-  try {
-    let thisUser = await userModel
-      .findOne({ email: user.email })
-      .select("password");
+    let thisUser = await userModel.findOne({ email: user.email });
 
     if (!thisUser)
       return res.send({ message: "User Email Not Found", ok: false });
 
     bcrypt.compare(user.password, thisUser.password, async (err, result) => {
-      if (result)
-        return res.send({ message: "User Logged In Successfully", ok: true });
-      else return res.send({ message: "User Password Incorrect", ok: false });
+      if (result) {
+        thisUser.password = undefined;
+        let token = createToken(thisUser);
+
+        return res.send({
+          token,
+          message: "User Logged In Successfully",
+          ok: true,
+        });
+      } else return res.send({ message: "User Password Incorrect", ok: false });
     });
   } catch (err) {
     return res.send({ message: err, ok: false });
   }
 });
+
+const createToken = (user) => {
+  let token = jwt.sign(JSON.stringify(user), process.env.JWT_SECRECT_KEY, {
+    expiresIn: "3d",
+  });
+  return token;
+};
 
 module.exports = authRouter;

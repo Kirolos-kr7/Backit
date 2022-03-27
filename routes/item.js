@@ -1,10 +1,12 @@
 const express = require("express");
 const itemModel = require("../models/itemModel");
+const authValidation = require("../middlewares/authValidation");
 
 const itemRouter = express.Router();
 
-itemRouter.get("/add", async (req, res) => {
+itemRouter.get("/add", authValidation, async (req, res) => {
   // let { name, type, description, images } = req.body;
+  return res.send(res.locals.isValid);
 
   let item = {
     name: "mario",
@@ -22,17 +24,17 @@ itemRouter.get("/add", async (req, res) => {
   }
 });
 
-itemRouter.delete('/:id', (req, res) => {
+itemRouter.delete("/:id", (req, res) => {
   const id = req.params.id;
-  itemModel.findByIdAndDelete(id)
-    .then(result => {
-      res.json({ redirect: '/items' });
+  itemModel
+    .findByIdAndDelete(id)
+    .then((result) => {
+      res.json({ redirect: "/items" });
     })
-    .catch(err => {
+    .catch((err) => {
       console.log(err);
-       itemModel.delete(item);
-    })
+      itemModel.delete(item);
+    });
 });
-
 
 module.exports = itemRouter;

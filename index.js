@@ -4,6 +4,7 @@ const mongoose = require("mongoose");
 const itemRouter = require("./routes/item");
 const bidRouter = require("./routes/bid");
 const authRouter = require("./routes/auth");
+require("dotenv").config();
 
 const app = express();
 app.use(express.json());
