@@ -1,4 +1,5 @@
 const express = require("express");
+const cors = require("cors");
 const mongoose = require("mongoose");
 const itemRouter = require("./routes/item");
 const bidRouter = require("./routes/bid");
@@ -6,6 +7,7 @@ const authRouter = require("./routes/auth");
 
 const app = express();
 app.use(express.json());
+app.use(cors());
 
 // connect to mongodb & listen for requests
 const dbURI =
