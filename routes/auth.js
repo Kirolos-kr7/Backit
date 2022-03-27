@@ -61,7 +61,7 @@ authRouter.post("/login", async (req, res) => {
   try {
     await loginSchema.validateAsync(user);
   } catch (err) {
-    res.send({ message: err.details[0].message, ok: false });
+    return res.send({ message: err.details[0].message, ok: false });
   }
 
   try {
@@ -74,11 +74,11 @@ authRouter.post("/login", async (req, res) => {
 
     bcrypt.compare(user.password, thisUser.password, async (err, result) => {
       if (result)
-        res.send({ message: "User Logged In Successfully", ok: true });
-      else res.send({ message: "User Password Incorrect", ok: false });
+        return res.send({ message: "User Logged In Successfully", ok: true });
+      else return res.send({ message: "User Password Incorrect", ok: false });
     });
   } catch (err) {
-    res.send({ message: err, ok: false });
+    return res.send({ message: err, ok: false });
   }
 });
 
