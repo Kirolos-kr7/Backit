@@ -38,17 +38,17 @@ authRouter.post("/register", async (req, res) => {
   try {
     await registerSchema.validateAsync(user);
   } catch (err) {
-    res.send({ message: err.details[0].message, ok: false });
+    return res.send({ message: err.details[0].message, ok: false });
   }
 
   try {
     bcrypt.hash(user.password, 10, async (err, hash) => {
       user.password = hash;
       await userModel.create(user);
-      res.send({ message: "User Registered Successfully", ok: true });
+      return res.send({ message: "User Registered Successfully", ok: true });
     });
   } catch (err) {
-    res.send({ message: err, ok: false });
+    return res.send({ message: err, ok: false });
   }
 });
 
