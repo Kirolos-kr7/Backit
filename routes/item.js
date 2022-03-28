@@ -3,6 +3,9 @@ const itemModel = require("../models/itemModel");
 const authValidation = require("../middlewares/authValidation");
 const userModel = require("../models/userModel");
 
+const { v4: uuidv4 } = require('uuid');
+
+
 const itemRouter = express.Router();
 
 itemRouter.post("/add", authValidation, async (req, res) => {
@@ -13,15 +16,22 @@ itemRouter.post("/add", authValidation, async (req, res) => {
     type: req.body.type,
     description: req.body.description,
     images: req.body.images,
-    uID: user.id
+    id: uuidv4()
   };
 
   try {
-    let inventory = userModel.findById({
+    let {inventory} = await userModel.findById({
       _id: user.id
     }).select("inventory")
-    console.log(inventory);
-    res.send({ data, message: "Added item successfully", ok: true });
+    inventory.push(item);
+
+
+    let {inventory:newInventory} = await userModel.findByIdAndUpdate({
+      _id: user.id
+    },{inventory}).select("inventory")
+      
+      res.send({ data:newInventory, message: "Added item successfully", ok: true });
+    
     
   } catch (err) {
     res.send({ message: err, ok: false });
