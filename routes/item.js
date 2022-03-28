@@ -5,20 +5,19 @@ const authValidation = require("../middlewares/authValidation");
 const itemRouter = express.Router();
 
 itemRouter.get("/add", authValidation, async (req, res) => {
-  // let { name, type, description, images } = req.body;
-  return res.send(res.locals.isValid);
+  let user = res.locals.user;
 
   let item = {
-    name: "mario",
-    type: "human",
-    description: "tall human",
-    images: null,
+    name: req.body.name,
+    type: req.body.type,
+    description: req.body.description,
+    images: req.body.images,
   };
 
   try {
-    await itemModel.create(item);
+    let data = await itemModel.create(item);
 
-    res.send({ message: "Added item successfully", ok: true });
+    res.send({ data, message: "Added item successfully", ok: true });
   } catch (err) {
     res.send({ message: err, ok: false });
   }

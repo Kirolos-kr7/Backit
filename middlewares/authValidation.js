@@ -1,20 +1,16 @@
 const jwt = require("jsonwebtoken");
+const userModel = require("../models/userModel");
 
-authValidation = (req, res, next) => {
-  let token = null;
+authValidation = async (req, res, next) => {
+  let authHeader = req.headers.authorization;
+  if (!authHeader) return res.sendStatus(403);
+  let token = authHeader.split(" ")[1];
+  if (!token) return res.sendStatus(403);
 
-  if (!token)
-    return res
-      .sendStatus(403)
-      .send({ message: "Forbidden.. Token not included" });
-
-  let isValid = jwt.verify(token, process.env.JWT_SECRECT_KEY);
-  res.locals.isValid = isValid;
-
-  if (!isValid)
-    return res
-      .sendStatus(403)
-      .send({ message: "Forbidden.. Token is invalid" });
+  jwt.verify(token, process.env.JWT_SECRECT_KEY, {}, async (err, dec) => {
+    if (err) return res.send({ message: err.message, ok: false });
+    res.locals.user = dec;
+  });
 
   next();
 };

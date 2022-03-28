@@ -3,6 +3,7 @@ const userModel = require("../models/userModel");
 const bcrypt = require("bcrypt");
 const validator = require("validator");
 const jwt = require("jsonwebtoken");
+const authValidation = require("../middlewares/authValidation");
 
 const authRouter = express.Router();
 
@@ -83,10 +84,27 @@ authRouter.post("/login", async (req, res) => {
   }
 });
 
+authRouter.get("/user", authValidation, async (req, res) => {
+  let user = res.locals.user;
+
+  try {
+    let userData = await userModel.findById((_id = user.id));
+    userData.password = undefined;
+    res.send({ data: await userData, ok: true });
+  } catch (err) {
+    return res.send({ message: err, ok: false });
+  }
+});
+
 const createToken = (user) => {
-  let token = jwt.sign(JSON.stringify(user), process.env.JWT_SECRECT_KEY, {
-    expiresIn: "3d",
-  });
+  let token = jwt.sign(
+    { email: user.email, id: user._id },
+    process.env.JWT_SECRECT_KEY,
+    {
+      expiresIn: "3d",
+    }
+  );
+
   return token;
 };
 
