@@ -38,11 +38,10 @@ authRouter.post("/register", async (req, res) => {
       let thisUser = await userModel.create(user);
       thisUser.password = undefined;
 
-      let token = createToken(thisUser);
-      thisUser.token = token;
+      let token = await createToken(thisUser);
 
       return res.send({
-        data: thisUser,
+        data: { user: thisUser, token },
         message: "User Registered Successfully",
         ok: true,
       });
@@ -71,11 +70,10 @@ authRouter.post("/login", async (req, res) => {
     bcrypt.compare(user.password, thisUser.password, async (err, result) => {
       if (result) {
         thisUser.password = undefined;
-        let token = createToken(thisUser);
-        thisUser.token = token;
+        let token = await createToken(thisUser);
 
         return res.send({
-          data: thisUser,
+          data: { user: thisUser, token },
           message: "User Logged In Successfully",
           ok: true,
         });
@@ -98,7 +96,7 @@ authRouter.get("/user", authValidation, async (req, res) => {
   }
 });
 
-const createToken = (user) => {
+const createToken = async (user) => {
   let token = jwt.sign(
     { email: user.email, id: user._id },
     process.env.JWT_SECRECT_KEY,
