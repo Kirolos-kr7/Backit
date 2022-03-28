@@ -3,9 +3,32 @@ const itemModel = require("../models/itemModel");
 const userModel = require("../models/userModel");
 const authValidation = require("../middlewares/authValidation");
 const { v4: uuidv4 } = require("uuid");
+const JOI = require("joi");
 
 const itemRouter = express.Router();
+const itemSchema = JOI.object({
+  name: JOI.string().min(3).max(32).required(),
+  type: JOI.string().min(3).max(32).required(),
+  description: JOI.string().min(3).max(256).required(),
+  images: JOI.array().allow(null),
+  id: JOI.string().required(),
+});
 
+itemRouter.get("/all", authValidation, async (req, res) => {
+  let user = res.locals.user;
+
+  try {
+    let {inventory} = await userModel.findOne({
+      _id: user.id,
+    }).select("inventory")
+
+    res.send({data:inventory, ok: true})
+  } catch (err) {
+    res.send({ message: err, ok: false });
+  }
+});
+
+// add done
 itemRouter.post("/add", authValidation, async (req, res) => {
   let user = res.locals.user;
 
@@ -16,6 +39,15 @@ itemRouter.post("/add", authValidation, async (req, res) => {
     images: req.body.images,
     id: uuidv4(),
   };
+
+  try {
+    await itemSchema.validateAsync(item);
+  } catch (err) {
+    return res.send({
+      message: err.details[0].message,
+      ok: false,
+    });
+  }
 
   try {
     let { inventory } = await userModel.findOne({
@@ -43,23 +75,28 @@ itemRouter.post("/add", authValidation, async (req, res) => {
   }
 });
 
-itemRouter.delete("/delete", authValidation,async (req, res) => {
+itemRouter.delete("/delete", authValidation, async (req, res) => {
   const itemID = req.body.id;
   let user = res.locals.user;
+  //
+  if (!itemID) {
+    return res.send({
+      message: "Item Id Is Invalid",
+      ok: false,
+    });
+  }
 
   try {
     let { inventory } = await userModel.findOne({
       _id: user.id,
     });
 
-    let newInventory = inventory.filter((item)=>{
-      if(item.id != itemID) return item;
+    let newInventory = inventory.filter((item) => {
+      if (item.id != itemID) return item;
     });
-    
 
-    if(inventory.length == 0){
+    if (inventory.length == newInventory.length) {
       return res.send({
-        
         message: "Item Not Found",
         ok: false,
       });
@@ -72,10 +109,8 @@ itemRouter.delete("/delete", authValidation,async (req, res) => {
       { inventory: newInventory }
     );
 
-    console.log(response)
     if (response.modifiedCount > 0) {
       return res.send({
-        
         message: "Delete item successfully",
         ok: true,
       });
