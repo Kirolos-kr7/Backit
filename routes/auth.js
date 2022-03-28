@@ -42,7 +42,7 @@ authRouter.post("/register", async (req, res) => {
       thisUser.token = token;
 
       return res.send({
-        thisUser: data,
+        data: thisUser,
         message: "User Registered Successfully",
         ok: true,
       });
@@ -75,7 +75,7 @@ authRouter.post("/login", async (req, res) => {
         thisUser.token = token;
 
         return res.send({
-          thisUser: data,
+          data: thisUser,
           message: "User Logged In Successfully",
           ok: true,
         });
