@@ -39,9 +39,10 @@ authRouter.post("/register", async (req, res) => {
       thisUser.password = undefined;
 
       let token = createToken(thisUser);
+      thisUser.token = token;
 
       return res.send({
-        token,
+        thisUser: data,
         message: "User Registered Successfully",
         ok: true,
       });
@@ -71,9 +72,10 @@ authRouter.post("/login", async (req, res) => {
       if (result) {
         thisUser.password = undefined;
         let token = createToken(thisUser);
+        thisUser.token = token;
 
         return res.send({
-          token,
+          thisUser: data,
           message: "User Logged In Successfully",
           ok: true,
         });
