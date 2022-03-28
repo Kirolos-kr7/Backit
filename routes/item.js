@@ -55,18 +55,28 @@ itemRouter.delete("/delete", authValidation,async (req, res) => {
     let newInventory = inventory.filter((item)=>{
       if(item.id != itemID) return item;
     });
+    
+
+    if(inventory.length == 0){
+      return res.send({
+        
+        message: "Item Not Found",
+        ok: false,
+      });
+    }
 
     let response = await userModel.updateOne(
       {
         _id: user.id,
       },
-      { newInventory }
+      { inventory: newInventory }
     );
 
+    console.log(response)
     if (response.modifiedCount > 0) {
       return res.send({
-        data: item,
-        message: "Added item successfully",
+        
+        message: "Delete item successfully",
         ok: true,
       });
     }
