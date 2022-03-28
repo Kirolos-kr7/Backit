@@ -43,17 +43,36 @@ itemRouter.post("/add", authValidation, async (req, res) => {
   }
 });
 
-// itemRouter.delete("/:id", (req, res) => {
-//   const id = req.params.id;
-//   itemModel
-//     .findByIdAndDelete(id)
-//     .then((result) => {
-//       res.json({ redirect: "/items" });
-//     })
-//     .catch((err) => {
-//       console.log(err);
-//       itemModel.delete(item);
-//     });
-// });
+itemRouter.delete("/delete", authValidation,async (req, res) => {
+  const itemID = req.body.id;
+  let user = res.locals.user;
+
+  try {
+    let { inventory } = await userModel.findOne({
+      _id: user.id,
+    });
+
+    let newInventory = inventory.filter((item)=>{
+      if(item.id != itemID) return item;
+    });
+
+    let response = await userModel.updateOne(
+      {
+        _id: user.id,
+      },
+      { newInventory }
+    );
+
+    if (response.modifiedCount > 0) {
+      return res.send({
+        data: item,
+        message: "Added item successfully",
+        ok: true,
+      });
+    }
+  } catch (err) {
+    res.send({ message: err, ok: false });
+  }
+});
 
 module.exports = itemRouter;
