@@ -1,12 +1,13 @@
 const express = require("express");
-const userModel = require("../models/userModel");
-const bcrypt = require("bcrypt");
+const userModel = require("../models/userModel"); //connect to userModel
+const bcrypt = require("bcrypt"); //connect to bcrypt
 const validator = require("validator");
-const jwt = require("jsonwebtoken");
-const authValidation = require("../middlewares/authValidation");
+const jwt = require("jsonwebtoken"); //connect to jwt
+const authValidation = require("../middlewares/authValidation"); //connect to validation middlware
 
 const authRouter = express.Router();
 
+//register
 authRouter.post("/register", async (req, res) => {
   let user = {
     name: req.body.name,
@@ -51,6 +52,7 @@ authRouter.post("/register", async (req, res) => {
   }
 });
 
+//login
 authRouter.post("/login", async (req, res) => {
   let user = {
     email: req.body.email,
@@ -84,6 +86,7 @@ authRouter.post("/login", async (req, res) => {
   }
 });
 
+//check data
 authRouter.get("/user", authValidation, async (req, res) => {
   let user = res.locals.user;
 
@@ -100,6 +103,7 @@ authRouter.get("/token", authValidation, async (req, res) => {
   return res.send({ message: "Auth Token Valid", ok: true });
 });
 
+//create a token
 const createToken = async (user) => {
   let token = jwt.sign(
     { email: user.email, id: user._id },

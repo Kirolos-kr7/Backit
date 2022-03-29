@@ -1,7 +1,8 @@
-const mongoose = require("mongoose");
-const itemModel = require("./itemModel");
-const Schema = mongoose.Schema;
+const mongoose = require("mongoose");// connect to db
+const itemModel = require("./itemModel"); //connect with itemModel
+const Schema = mongoose.Schema; //build schema
 
+//the form of the schema
 const userSchema = new Schema(
   {
     name: {

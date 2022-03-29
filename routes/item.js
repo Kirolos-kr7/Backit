@@ -1,11 +1,13 @@
 const express = require("express");
-const itemModel = require("../models/itemModel");
-const userModel = require("../models/userModel");
-const authValidation = require("../middlewares/authValidation");
-const { v4: uuidv4 } = require("uuid");
-const JOI = require("joi");
+const itemModel = require("../models/itemModel"); //connect to itemModel 
+const userModel = require("../models/userModel");  //connect to userModel
+const authValidation = require("../middlewares/authValidation"); //connect to validation in middlewares
+const { v4: uuidv4 } = require("uuid"); // build unique id
+const JOI = require("joi"); //use joi to easier form
 
 const itemRouter = express.Router();
+
+//identify the requests of every thing
 const itemSchema = JOI.object({
   name: JOI.string().min(3).max(32).required(),
   type: JOI.string().min(3).max(32).required(),
@@ -13,6 +15,7 @@ const itemSchema = JOI.object({
   images: JOI.array().allow(null),
   id: JOI.string().required(),
 });
+
 
 itemRouter.get("/all", authValidation, async (req, res) => {
   let user = res.locals.user;
@@ -28,7 +31,7 @@ itemRouter.get("/all", authValidation, async (req, res) => {
   }
 });
 
-// add done
+// add item
 itemRouter.post("/add", authValidation, async (req, res) => {
   let user = res.locals.user;
 
@@ -75,10 +78,11 @@ itemRouter.post("/add", authValidation, async (req, res) => {
   }
 });
 
+//delete item
 itemRouter.delete("/delete", authValidation, async (req, res) => {
   const itemID = req.body.id;
   let user = res.locals.user;
-  //
+  
   if (!itemID) {
     return res.send({
       message: "Item Id Is Invalid",
