@@ -96,6 +96,12 @@ authRouter.get("/user", authValidation, async (req, res) => {
   }
 });
 
+authRouter.get("/token", authValidation, async (req, res) => {
+  let user = res.locals.user;
+
+  if (user) res.send({ ok: true });
+});
+
 const createToken = async (user) => {
   let token = jwt.sign(
     { email: user.email, id: user._id },
