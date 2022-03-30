@@ -1,6 +1,10 @@
-const mongoose = require("mongoose");// connect to db
-const itemModel = require("./itemModel"); //connect with itemModel
+const mongoose = require("mongoose"); // connect to db
 const Schema = mongoose.Schema; //build schema
+
+var validateEmail = function (email) {
+  var REGEX = /^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/;
+  return REGEX.test(email);
+};
 
 //the form of the schema
 const userSchema = new Schema(
@@ -15,6 +19,11 @@ const userSchema = new Schema(
       type: String,
       required: [true, "User Email is Required"],
       lowercase: true,
+      validate: [validateEmail, "User Email is Invalid"],
+      match: [
+        /^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/,
+        "User Email is Invalid",
+      ],
     },
     phone: {
       type: String,
@@ -46,9 +55,8 @@ const userSchema = new Schema(
     },
     inventory: {
       type: Array,
-      default: []
-    }
-    
+      default: [],
+    },
   },
   { timestamps: true }
 );

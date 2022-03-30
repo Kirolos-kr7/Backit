@@ -22,12 +22,8 @@ authRouter.post("/register", async (req, res) => {
   };
 
   try {
-    let isValid = await validator.isEmail(user.email);
-    if (!isValid)
-      return res.send({ message: "User Email is Invalid", ok: false });
-
-    let isPasswordMatch = user.password === user.confirmPassword;
-    if (!isPasswordMatch)
+    let passwordsMatch = user.password === user.confirmPassword;
+    if (!passwordsMatch)
       return res.send({ message: "User Passwords Doesn't Match", ok: false });
 
     let isRegistered = await userModel.findOne({ email: user.email });
