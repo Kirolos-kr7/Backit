@@ -8,15 +8,15 @@ const JOI = require("joi");
 
 const userJOISchema = JOI.object({
   name: JOI.string().min(2).max(32).required(),
-  phone: JOI.string().min(4).required(),
   email: JOI.string()
-    .email({ minDomainSegments: 2, tlds: { allow: ["com", "net"] } })
+    .email({ minDomainSegments: 2, tlds: { allow: ["com", "net", "co"] } })
     .required(),
-  address: JOI.string().min(2).required(),
   password: JOI.string().pattern(new RegExp("^[a-zA-Z0-9]{3,30}$")).required(),
   confirmPassword: JOI.ref("password"),
-  profilePicture: JOI.string().allow(null, ""),
+  address: JOI.string().min(2).required(),
   gender: JOI.string().min(4).required(),
+  phone: JOI.string().min(6).required(),
+  profilePicture: JOI.string().allow(null, ""),
   premium: JOI.object().allow(null, {}),
 });
 
