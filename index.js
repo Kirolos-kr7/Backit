@@ -1,6 +1,7 @@
 const express = require("express");
 const cors = require("cors");
 const mongoose = require("mongoose");
+const cookieParser = require("cookie-parser");
 const itemRouter = require("./routes/item");
 const bidRouter = require("./routes/bid");
 const authRouter = require("./routes/auth");
@@ -9,6 +10,7 @@ require("dotenv").config();
 const app = express();
 app.use(express.json());
 app.use(cors());
+app.use(cookieParser());
 
 // connect to mongodb & listen for requests
 const dbURI =
