@@ -89,16 +89,13 @@ authRouter.get("/user", authValidation, async (req, res) => {
   let user = res.locals.user;
 
   try {
-    let userData = await userModel.findById((_id = user.id));
+    let userData = await userModel.findById({ _id: user.id });
     userData.password = undefined;
-    res.send({ data: await userData, ok: true });
+    userData.inventory = undefined;
+    res.send({ data: userData, ok: true });
   } catch (err) {
     return res.send({ message: err, ok: false });
   }
-});
-
-authRouter.get("/token", authValidation, async (req, res) => {
-  return res.send({ message: "Auth Token Valid", ok: true });
 });
 
 //create a token
