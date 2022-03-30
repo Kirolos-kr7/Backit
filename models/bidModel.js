@@ -1,6 +1,7 @@
-const mongoose = require("mongoose");
-const Schema = mongoose.Schema;
+const mongoose = require("mongoose"); // connect to db
+const Schema = mongoose.Schema; //build schema
 
+//the form of the schema
 const bidSchema = new Schema(
   {
     itemID: {
@@ -27,5 +28,5 @@ const bidSchema = new Schema(
   { timestamps: true }
 );
 
-const bidModel = mongoose.model("Bid", bidSchema);
+const bidModel = mongoose.model("Bid", bidSchema);  
 module.exports = bidModel;
