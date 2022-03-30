@@ -1,11 +1,24 @@
 const express = require("express");
 const userModel = require("../models/userModel"); //connect to userModel
 const bcrypt = require("bcrypt"); //connect to bcrypt
-const validator = require("validator");
 const jwt = require("jsonwebtoken"); //connect to jwt
 const authValidation = require("../middlewares/authValidation"); //connect to validation middlware
-
 const authRouter = express.Router();
+const JOI = require("joi");
+
+const userJOISchema = JOI.object({
+  name: JOI.string().min(2).max(32).required(),
+  phone: JOI.string().min(4).required(),
+  email: JOI.string()
+    .email({ minDomainSegments: 2, tlds: { allow: ["com", "net"] } })
+    .required(),
+  address: JOI.string().min(2).required(),
+  password: JOI.string().pattern(new RegExp("^[a-zA-Z0-9]{3,30}$")).required(),
+  confirmPassword: JOI.ref("password"),
+  profilePicture: JOI.string().allow(null, ""),
+  gender: JOI.string().min(4).required(),
+  premium: JOI.object().allow(null, {}),
+});
 
 //register
 authRouter.post("/register", async (req, res) => {
@@ -22,9 +35,10 @@ authRouter.post("/register", async (req, res) => {
   };
 
   try {
-    let passwordsMatch = user.password === user.confirmPassword;
-    if (!passwordsMatch)
-      return res.send({ message: "User Passwords Doesn't Match", ok: false });
+    let isValid = userJOISchema.validate(user);
+    if (isValid.error) {
+      return res.send({ message: isValid.error.details[0].message, ok: false });
+    }
 
     let isRegistered = await userModel.findOne({ email: user.email });
     if (isRegistered)
@@ -55,9 +69,10 @@ authRouter.post("/login", async (req, res) => {
   };
 
   try {
-    let isValid = await validator.isEmail(user.email);
-    if (!isValid)
-      return res.send({ message: "User Email is Invalid", ok: false });
+    let isValid = userJOISchema.validate(user);
+    if (isValid.error) {
+      return res.send({ message: isValid.error.details[0].message, ok: false });
+    }
 
     let thisUser = await userModel.findOne({ email: user.email });
 
@@ -67,6 +82,7 @@ authRouter.post("/login", async (req, res) => {
     bcrypt.compare(user.password, thisUser.password, async (err, result) => {
       if (result) {
         thisUser.password = undefined;
+        thisUser.inventory = undefined;
         let token = await createToken(thisUser);
         return res.send({
           data: { user: thisUser, token },
