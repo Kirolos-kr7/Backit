@@ -40,7 +40,6 @@ authRouter.post("/register", async (req, res) => {
       thisUser.password = undefined;
 
       let token = await createToken(thisUser);
-      res.cookie("authToken", token);
       return res.send({
         data: { user: thisUser, token },
         message: "User Registered Successfully",
@@ -73,7 +72,6 @@ authRouter.post("/login", async (req, res) => {
       if (result) {
         thisUser.password = undefined;
         let token = await createToken(thisUser);
-        res.cookie("authToken", token);
         return res.send({
           data: { user: thisUser, token },
           message: "User Logged In Successfully",
