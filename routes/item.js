@@ -4,6 +4,8 @@ const userModel = require("../models/userModel");  //connect to userModel
 const authValidation = require("../middlewares/authValidation"); //connect to validation in middlewares
 const { v4: uuidv4 } = require("uuid"); // build unique id
 const JOI = require("joi"); //use joi to easier form
+const req = require("express/lib/request");
+const res = require("express/lib/response");
 
 const itemRouter = express.Router();
 
@@ -29,6 +31,59 @@ itemRouter.get("/all", authValidation, async (req, res) => {
   } catch (err) {
     res.send({ message: err, ok: false });
   }
+});
+
+// Edit item
+itemRouter.patch("/edit", authValidation, async (req, res) => {
+  let user = res.locals.user;
+
+  let item = {
+    name: req.body.name,
+    type: req.body.type,
+    description: req.body.description,
+    images: req.body.images,
+    id: req.body.id,
+  };
+
+  try {
+    await itemSchema.validateAsync(item);
+  } catch (err) {
+    return res.send({
+      message: err.details[0].message,
+      ok: false,
+    });
+  }
+  try {
+    let { inventory } = await userModel.findOne({
+      _id: user.id,
+    });
+
+    inventory.forEach(existingItem => {
+      if(item.id == existingItem.id){
+        existingItem =item
+        console.log(item);
+      }
+    });
+    
+
+    let response = await userModel.updateOne(
+      {
+        _id: user.id,
+      },
+      { inventory }
+    );
+
+    if (response.modifiedCount > 0) {
+      return res.send({
+        data: item,
+        message: "edit item successfully",
+        ok: true,
+      });
+    }
+  } catch (err) {
+    res.send({ message: err, ok: false });
+  }
+
 });
 
 // add item
