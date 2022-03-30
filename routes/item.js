@@ -1,6 +1,6 @@
 const express = require("express");
-const itemModel = require("../models/itemModel"); //connect to itemModel 
-const userModel = require("../models/userModel");  //connect to userModel
+const itemModel = require("../models/itemModel"); //connect to itemModel
+const userModel = require("../models/userModel"); //connect to userModel
 const authValidation = require("../middlewares/authValidation"); //connect to validation in middlewares
 const { v4: uuidv4 } = require("uuid"); // build unique id
 const JOI = require("joi"); //use joi to easier form
@@ -18,16 +18,17 @@ const itemSchema = JOI.object({
   id: JOI.string().required(),
 });
 
-
 itemRouter.get("/all", authValidation, async (req, res) => {
   let user = res.locals.user;
 
   try {
-    let {inventory} = await userModel.findOne({
-      _id: user.id,
-    }).select("inventory")
+    let { inventory } = await userModel
+      .findOne({
+        _id: user.id,
+      })
+      .select("inventory");
 
-    res.send({data:inventory, ok: true})
+    res.send({ data: inventory, ok: true });
   } catch (err) {
     res.send({ message: err, ok: false });
   }
@@ -58,13 +59,11 @@ itemRouter.patch("/edit", authValidation, async (req, res) => {
       _id: user.id,
     });
 
-    inventory.forEach(existingItem => {
-      if(item.id == existingItem.id){
-        existingItem =item
-        console.log(item);
+    inventory.forEach((existingItem, i) => {
+      if (item.id == existingItem.id) {
+        inventory[i] = item;
       }
     });
-    
 
     let response = await userModel.updateOne(
       {
@@ -83,7 +82,6 @@ itemRouter.patch("/edit", authValidation, async (req, res) => {
   } catch (err) {
     res.send({ message: err, ok: false });
   }
-
 });
 
 // add item
@@ -137,7 +135,7 @@ itemRouter.post("/add", authValidation, async (req, res) => {
 itemRouter.delete("/delete", authValidation, async (req, res) => {
   const itemID = req.body.id;
   let user = res.locals.user;
-  
+
   if (!itemID) {
     return res.send({
       message: "Item Id Is Invalid",
