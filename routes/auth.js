@@ -6,7 +6,7 @@ const authValidation = require("../middlewares/authValidation"); //connect to va
 const authRouter = express.Router();
 const JOI = require("joi");
 
-const userJOISchema = JOI.object({
+const registerSchema = JOI.object({
   name: JOI.string().min(2).max(32).required(),
   email: JOI.string()
     .email({ minDomainSegments: 2, tlds: { allow: ["com", "net", "co"] } })
@@ -18,6 +18,13 @@ const userJOISchema = JOI.object({
   phone: JOI.string().min(6).required(),
   profilePicture: JOI.string().allow(null, ""),
   premium: JOI.object().allow(null, {}),
+});
+
+const loginSchema = JOI.object({
+  email: JOI.string()
+    .email({ minDomainSegments: 2, tlds: { allow: ["com", "net", "co"] } })
+    .required(),
+  password: JOI.string().pattern(new RegExp("^[a-zA-Z0-9]{3,30}$")).required(),
 });
 
 //register
@@ -35,7 +42,7 @@ authRouter.post("/register", async (req, res) => {
   };
 
   try {
-    let isValid = userJOISchema.validate(user);
+    let isValid = registerSchema.validate(user);
     if (isValid.error) {
       return res.send({ message: isValid.error.details[0].message, ok: false });
     }
@@ -69,7 +76,7 @@ authRouter.post("/login", async (req, res) => {
   };
 
   try {
-    let isValid = userJOISchema.validate(user);
+    let isValid = loginSchema.validate(user);
     if (isValid.error) {
       return res.send({ message: isValid.error.details[0].message, ok: false });
     }
