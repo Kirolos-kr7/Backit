@@ -1,7 +1,8 @@
 const express = require("express");
-const itemModel = require("../models/itemModel"); //connect to itemModel
-const userModel = require("../models/userModel"); //connect to userModel
-const authValidation = require("../middlewares/authValidation"); //connect to validation in middlewares
+const itemModel = require("../models/itemModel"); //import to itemModel
+const userModel = require("../models/userModel"); //import to userModel
+const bidModel = require("../models/bidModel");
+const authValidation = require("../middlewares/authValidation"); //import to validation in middlewares  
 const { v4: uuidv4 } = require("uuid"); // build unique id
 const JOI = require("joi"); //use joi to easier form
 const req = require("express/lib/request");
@@ -144,6 +145,7 @@ itemRouter.delete("/delete", authValidation, async (req, res) => {
   }
 
   try {
+    
     let { inventory } = await userModel.findOne({
       _id: user.id,
     });
@@ -167,10 +169,18 @@ itemRouter.delete("/delete", authValidation, async (req, res) => {
     );
 
     if (response.modifiedCount > 0) {
-      return res.send({
-        message: "Delete item successfully",
-        ok: true,
+
+      let bidResponse  = await bidModel.deleteOne({
+        itemID: itemID,
       });
+
+      if (bidResponse.deletedCount > 0) {
+        return res.send({
+          message: "Delete item successfully",
+          ok: true,
+        });
+      }
+      
     }
   } catch (err) {
     res.send({ message: err, ok: false });

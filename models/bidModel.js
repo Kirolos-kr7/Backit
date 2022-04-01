@@ -20,13 +20,18 @@ const bidSchema = new Schema(
       type: Date,
       required: true,
     },
-    uid: {
+    uID: {
       type: String,
-      // required: true,
+      required: true,
     },
+    status: {
+      type: String,
+      required: true,
+      lowercase: true,
+    }
   },
   { timestamps: true }
 );
 
-const bidModel = mongoose.model("Bid", bidSchema);  
+const bidModel = mongoose.model("Bid", bidSchema);
 module.exports = bidModel;

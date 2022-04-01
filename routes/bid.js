@@ -1,35 +1,35 @@
 const express = require("express");
-const JOI = require("joi"); //use joi to easier form
+const JOI = require("joi"); 
 const bidModel = require("../models/bidModel");
-const bidModel= require("../models/bidModel");
 const userModel = require("../models/userModel");
 
 const bidRouter = express.Router();
+
 const bidSchema = JOI.object({
- 
   startDate: JOI.date().required(),
   endDate: JOI.date().required(),
-  minPrice: JOI.required(),
+  minPrice: JOI.number().required(),
   status: JOI.string().required(),
   bidsHistory: JOI.array().allow(null),
   uID: JOI.string().required(),
-  bidID: JOI.string().required(),
+  itemID: JOI.string().required(),
 });
 
 
 bidRouter.post("/add", authValidation, async (req, res) => {
   let user = res.locals.user;
 
+  
   let bid = {
     startDate: req.body.startDate,
-    endDate: req.body,endDate,
+    endDate: req.body.endDate,
     minPrice: req.body.minPrice,
     status: req.body.status,
-    bidsHistory: req.body.bidsHistory,
-    bidID: req.body.bidID,
-    uID: req.body.uID
+    bidsHistory: [],
+    uID: user.id,
+    itemID: req.body.itemID,
   };
-
+    
   try {
     await bidSchema.validateAsync(bid);
   } catch (err) {
@@ -38,58 +38,44 @@ bidRouter.post("/add", authValidation, async (req, res) => {
       ok: false,
     });
   }
-
   try {
-    
+    let newBid = new bidModel(bid)
+    let addedBid = await newBid.save()
 
-    if (response.modifiedCount > 0) {
+    if(addedBid){
       return res.send({
-        data: bid,
+        data: addedBid,
         message: "Added bid successfully",
         ok: true,
       });
+
     }
+      
+    
   } catch (err) {
     res.send({ message: err, ok: false });
   }
 });
 
 //delete bid
-/*bidRouter.delete("/delete", authValidation, async (req, res) => {
-  const bidID = req.body.id;
+bidRouter.delete("/delete", authValidation, async (req, res) => {
   let user = res.locals.user;
+  let bidID = req.body.bidID;
+  
 
   if (!bidID) {
     return res.send({
-      message: "bid Id Is Invalid",
+      message: "bid Id Is required",
       ok: false,
     });
   }
 
   try {
-    let { inventory } = await userModel.findOne({
-      _id: user.id,
+    let response  = await bidModel.deleteOne({
+      _id: bidID,
     });
-
-    let newInventory = inventory.filter((bid) => {
-      if (bid.id != bidID) return bid;
-    });
-
-    if (inventory.length == newInventory.length) {
-      return res.send({
-        message: "bid Not Found",
-        ok: false,
-      });
-    }
-
-    let response = await userModel.updateOne(
-      {
-        _id: user.id,
-      },
-      { inventory: newInventory }
-    );
-
-    if (response.modifiedCount > 0) {
+    
+    if (response.deletedCount > 0) {
       return res.send({
         message: "Delete bid successfully",
         ok: true,
@@ -99,18 +85,7 @@ bidRouter.post("/add", authValidation, async (req, res) => {
     res.send({ message: err, ok: false });
   }
 });
-*/
-//bidRouter.delete('/:id', (req, res) => {
-  //const id = req.params.id;
-  //bidModel.findByIdAndDelete(id)
-    //.then(result => {
-      //res.json({ redirect: '/bids' });
-    //})
-    //.catch(err => {
-      //console.log(err);
-       //bidModel.delete(bid);
-    //})
-//});
+
 
 
 
