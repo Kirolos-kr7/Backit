@@ -1,6 +1,10 @@
 const express = require("express");
+const req = require("express/lib/request");
+const { send } = require("express/lib/response");
+const res = require("express/lib/response");
 const JOI = require("joi"); //use joi to easier form
 const bidModel = require("../models/bidModel");  //import to bidModel
+const itemModel = require("../models/itemModel");
 const userModel = require("../models/userModel");  //import to userModel
 
 const bidRouter = express.Router();
@@ -114,11 +118,33 @@ bidRouter.get('/view_bid', async (req, res) => {
   const id = req.body.bidID;
   try{
     let bid= await bidModel.findOne({_id: id});
+    let item =await getItem(bid);
+    bid.item = item;
     res.send({data:bid, ok: true });
 }catch(err){
    res.send({ message: err, ok: false });
 }
 });
+
+
+const getItem =async (bid)=>{
+  let uID= bid.uID;
+  let itemID=bid.itemID;
+  
+  
+  let { inventory } = await userModel.findOne({
+    _id: uID,
+  });
+  let requiredItem 
+   inventory.forEach((item) => {
+    if (item.id == itemID) requiredItem = item;
+
+  });
+
+  return requiredItem;
+
+}
+
 
 
 module.exports = bidRouter;
