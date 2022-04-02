@@ -33,6 +33,3 @@ let port = process.env.PORT || 8080;
 app.listen(port, () => {
   console.log("Listenting on Port " + port);
 });
-
-app.engine('html', require('ejs').renderFile);
-app.set('view engine', 'html');

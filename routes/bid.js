@@ -1,11 +1,7 @@
 const express = require("express");
-const req = require("express/lib/request");
-const { send } = require("express/lib/response");
-const res = require("express/lib/response");
 const JOI = require("joi"); //use joi to easier form
-const bidModel = require("../models/bidModel");  //import to bidModel
-const itemModel = require("../models/itemModel");
-const userModel = require("../models/userModel");  //import to userModel
+const bidModel = require("../models/bidModel"); //import to bidModel
+const userModel = require("../models/userModel"); //import to userModel
 
 const bidRouter = express.Router();
 
@@ -19,11 +15,9 @@ const bidSchema = JOI.object({
   itemID: JOI.string().required(),
 });
 
-
 bidRouter.post("/add", authValidation, async (req, res) => {
   let user = res.locals.user;
 
-  
   let bid = {
     startDate: req.body.startDate,
     endDate: req.body.endDate,
@@ -33,7 +27,7 @@ bidRouter.post("/add", authValidation, async (req, res) => {
     uID: user.id,
     itemID: req.body.itemID,
   };
-    
+
   try {
     await bidSchema.validateAsync(bid);
   } catch (err) {
@@ -43,19 +37,16 @@ bidRouter.post("/add", authValidation, async (req, res) => {
     });
   }
   try {
-    let newBid = new bidModel(bid)
-    let addedBid = await newBid.save()
+    let newBid = new bidModel(bid);
+    let addedBid = await newBid.save();
 
-    if(addedBid){
+    if (addedBid) {
       return res.send({
         data: addedBid,
         message: "Added bid successfully",
         ok: true,
       });
-
     }
-      
-    
   } catch (err) {
     res.send({ message: err, ok: false });
   }
@@ -65,7 +56,6 @@ bidRouter.post("/add", authValidation, async (req, res) => {
 bidRouter.delete("/delete", authValidation, async (req, res) => {
   let user = res.locals.user;
   let bidID = req.body.bidID;
-  
 
   if (!bidID) {
     return res.send({
@@ -75,10 +65,10 @@ bidRouter.delete("/delete", authValidation, async (req, res) => {
   }
 
   try {
-    let response  = await bidModel.deleteOne({
+    let response = await bidModel.deleteOne({
       _id: bidID,
     });
-    
+
     if (response.deletedCount > 0) {
       return res.send({
         message: "Delete bid successfully",
@@ -89,62 +79,95 @@ bidRouter.delete("/delete", authValidation, async (req, res) => {
     res.send({ message: err, ok: false });
   }
 });
+
 //view all bids
-bidRouter.get('/all_bids',async (req, res) => {
- 
- try{
-     let bids= await bidModel.find({});
-     res.send({data:bids, ok: true });
- }catch(err){
+bidRouter.get("/all_bids", async (req, res) => {
+  let bidStatus = req.body.bidStatus;
+
+  if (
+    bidStatus !== "active" &&
+    bidStatus !== "soon" &&
+    bidStatus !== "expired" &&
+    bidStatus !== "canceled"
+  )
+    return res.send({ message: "Invalid bid status", ok: false });
+
+  try {
+    let bids = await bidModel.find({ status: bidStatus });
+
+    let allBids = await getAllItems(bids);
+
+    res.send({ data: allBids, ok: true });
+  } catch (err) {
     res.send({ message: err, ok: false });
- }
-   
+  }
 });
 
 //view all bids for special user
-bidRouter.get('/sales',authValidation, async (req, res) => {
+bidRouter.get("/sales", authValidation, async (req, res) => {
   let user = res.locals.user;
-  try{
-      let bids= await bidModel.find({uID: user.id});
-      res.send({data:bids, ok: true });
-  }catch(err){
-     res.send({ message: err, ok: false });
-  }
-    
- });
+  let bidStatus = req.body.bidStatus;
 
-//view special bid
-bidRouter.get('/view_bid', async (req, res) => {
-  const id = req.body.bidID;
-  try{
-    let bid= await bidModel.findOne({_id: id});
-    let item =await getItem(bid);
-    bid.item = item;
-    res.send({data:bid, ok: true });
-}catch(err){
-   res.send({ message: err, ok: false });
-}
+  if (
+    bidStatus !== "active" &&
+    bidStatus !== "soon" &&
+    bidStatus !== "expired" &&
+    bidStatus !== "canceled"
+  )
+    return res.send({ message: "Invalid bid status", ok: false });
+
+  try {
+    let bids = await bidModel.find({ uID: user.id, status: bidStatus });
+
+    let salesBids = await getAllItems(bids);
+
+    res.send({ data: salesBids, ok: true });
+  } catch (err) {
+    res.send({ message: err, ok: false });
+  }
 });
 
+//view special bid
+bidRouter.get("/view", async (req, res) => {
+  const id = req.body.bidID;
+  try {
+    let bid = await bidModel.findOne({ _id: id });
+    let item = await getItem(bid);
 
-const getItem =async (bid)=>{
-  let uID= bid.uID;
-  let itemID=bid.itemID;
-  
-  
+    res.send({ data: { bid, item }, ok: true });
+  } catch (err) {
+    res.send({ message: err, ok: false });
+  }
+});
+
+const getItem = async (bid) => {
+  let uID = bid.uID;
+  let itemID = bid.itemID;
+  let requiredItem = null;
+
   let { inventory } = await userModel.findOne({
     _id: uID,
   });
-  let requiredItem 
-   inventory.forEach((item) => {
-    if (item.id == itemID) requiredItem = item;
 
+  inventory.forEach((item) => {
+    if (item.id == itemID) {
+      requiredItem = item;
+    }
   });
 
   return requiredItem;
+};
 
-}
+const getAllItems = async (bids) => {
+  let bidWithItem = [];
 
+  for (let i = 0; i < bids.length; i++) {
+    let bid = bids[i];
+    let item = await getItem(bid);
+    bidWithItem.push({ bid, item });
+  }
 
+  return bidWithItem;
+};
 
 module.exports = bidRouter;
