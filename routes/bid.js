@@ -140,6 +140,25 @@ bidRouter.get("/view", async (req, res) => {
   }
 });
 
+bidRouter.get("/join", authValidation, async (req, res) => {
+  let user = res.locals.user;
+  let bidID = req.body.bidID;
+  let bidPrice = req.body.bidPrice;
+
+  try {
+    let bid = await bidModel.findOne(
+      { _id: bidID },
+      { $push: { bidsHistory: { userID: user.id, price: bidPrice } } }
+    );
+
+    res.send(bid);
+
+    res.send({ data: { bid, item }, ok: true });
+  } catch (err) {
+    res.send({ message: err, ok: false });
+  }
+});
+
 const getItem = async (bid) => {
   let uID = bid.uID;
   let itemID = bid.itemID;
