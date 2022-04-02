@@ -1,7 +1,7 @@
 const express = require("express");
-const JOI = require("joi"); 
-const bidModel = require("../models/bidModel");
-const userModel = require("../models/userModel");
+const JOI = require("joi"); //use joi to easier form
+const bidModel = require("../models/bidModel");  //import to bidModel
+const userModel = require("../models/userModel");  //import to userModel
 
 const bidRouter = express.Router();
 
@@ -85,8 +85,40 @@ bidRouter.delete("/delete", authValidation, async (req, res) => {
     res.send({ message: err, ok: false });
   }
 });
+//view all bids
+bidRouter.get('/all_bids',async (req, res) => {
+ 
+ try{
+     let bids= await bidModel.find({});
+     res.send({data:bids, ok: true });
+ }catch(err){
+    res.send({ message: err, ok: false });
+ }
+   
+});
 
+//view all bids for special user
+bidRouter.get('/sales',authValidation, async (req, res) => {
+  let user = res.locals.user;
+  try{
+      let bids= await bidModel.find({uID: user.id});
+      res.send({data:bids, ok: true });
+  }catch(err){
+     res.send({ message: err, ok: false });
+  }
+    
+ });
 
+//view special bid
+bidRouter.get('/view_bid', async (req, res) => {
+  const id = req.body.bidID;
+  try{
+    let bid= await bidModel.findOne({_id: id});
+    res.send({data:bid, ok: true });
+}catch(err){
+   res.send({ message: err, ok: false });
+}
+});
 
 
 module.exports = bidRouter;

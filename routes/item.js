@@ -174,12 +174,11 @@ itemRouter.delete("/delete", authValidation, async (req, res) => {
         itemID: itemID,
       });
 
-      if (bidResponse.deletedCount > 0) {
         return res.send({
           message: "Delete item successfully",
           ok: true,
         });
-      }
+      
       
     }
   } catch (err) {
