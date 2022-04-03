@@ -4,10 +4,7 @@ const Schema = mongoose.Schema; //build schema
 //the form of the schema
 const bidSchema = new Schema(
   {
-    itemID: {
-      type: String,
-      //required: true,
-    },
+    item: { type: Schema.Types.ObjectId, ref: "Item" },
     minPrice: {
       type: Number,
       required: true,
@@ -28,7 +25,7 @@ const bidSchema = new Schema(
       type: String,
       required: true,
       lowercase: true,
-    }
+    },
   },
   { timestamps: true }
 );

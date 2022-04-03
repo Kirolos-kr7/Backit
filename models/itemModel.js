@@ -1,4 +1,4 @@
-const mongoose = require("mongoose");// connect to db
+const mongoose = require("mongoose"); // connect to db
 const Schema = mongoose.Schema; //build schema
 
 //the form of the schema
@@ -18,11 +18,10 @@ const itemSchema = new Schema(
     },
     images: {
       type: Array,
-      // required: true,
     },
     uID: {
       type: String,
-      // required: true,
+      required: true,
     },
   },
   { timestamps: true }

@@ -43,10 +43,6 @@ const userSchema = new Schema(
       type: Object,
       default: null,
     },
-    inventory: {
-      type: Array,
-      default: [],
-    },
   },
   { timestamps: true }
 );

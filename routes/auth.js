@@ -89,7 +89,7 @@ authRouter.post("/login", async (req, res) => {
     bcrypt.compare(user.password, thisUser.password, async (err, result) => {
       if (result) {
         thisUser.password = undefined;
-        thisUser.inventory = undefined;
+
         let token = await createToken(thisUser);
         return res.send({
           data: { user: thisUser, token },
@@ -103,14 +103,14 @@ authRouter.post("/login", async (req, res) => {
   }
 });
 
-//check data
+//get user data
 authRouter.get("/user", authValidation, async (req, res) => {
   let user = res.locals.user;
 
   try {
     let userData = await userModel.findById({ _id: user.id });
     userData.password = undefined;
-    userData.inventory = undefined;
+
     res.send({ data: userData, ok: true });
   } catch (err) {
     return res.send({ message: err, ok: false });

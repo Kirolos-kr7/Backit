@@ -12,7 +12,7 @@ const bidSchema = JOI.object({
   status: JOI.string().required(),
   bidsHistory: JOI.array().allow(null),
   uID: JOI.string().required(),
-  itemID: JOI.string().required(),
+  item: JOI.string().required(),
 });
 
 bidRouter.post("/add", authValidation, async (req, res) => {
@@ -25,7 +25,7 @@ bidRouter.post("/add", authValidation, async (req, res) => {
     status: req.body.status,
     bidsHistory: [],
     uID: user.id,
-    itemID: req.body.itemID,
+    item: req.body.item,
   };
 
   try {
@@ -37,12 +37,11 @@ bidRouter.post("/add", authValidation, async (req, res) => {
     });
   }
   try {
-    let newBid = new bidModel(bid);
-    let addedBid = await newBid.save();
+    let newBid = await bidModel.create(bid);
 
-    if (addedBid) {
+    if (newBid) {
       return res.send({
-        data: addedBid,
+        data: newBid,
         message: "Added bid successfully",
         ok: true,
       });
@@ -59,7 +58,7 @@ bidRouter.delete("/delete", authValidation, async (req, res) => {
 
   if (!bidID) {
     return res.send({
-      message: "bid Id Is required",
+      message: "bid Id is required",
       ok: false,
     });
   }
@@ -81,7 +80,7 @@ bidRouter.delete("/delete", authValidation, async (req, res) => {
 });
 
 //view all bids
-bidRouter.get("/all_bids", async (req, res) => {
+bidRouter.get("/all", async (req, res) => {
   let bidStatus = req.body.bidStatus;
 
   if (
@@ -93,11 +92,9 @@ bidRouter.get("/all_bids", async (req, res) => {
     return res.send({ message: "Invalid bid status", ok: false });
 
   try {
-    let bids = await bidModel.find({ status: bidStatus });
+    let bids = await bidModel.find({ status: bidStatus }).populate("item");
 
-    let allBids = await getAllItems(bids);
-
-    res.send({ data: allBids, ok: true });
+    res.send({ data: bids, ok: true });
   } catch (err) {
     res.send({ message: err, ok: false });
   }
@@ -117,11 +114,11 @@ bidRouter.get("/sales", authValidation, async (req, res) => {
     return res.send({ message: "Invalid bid status", ok: false });
 
   try {
-    let bids = await bidModel.find({ uID: user.id, status: bidStatus });
+    let bids = await bidModel
+      .find({ uID: user.id, status: bidStatus })
+      .populate("item");
 
-    let salesBids = await getAllItems(bids);
-
-    res.send({ data: salesBids, ok: true });
+    res.send({ data: bids, ok: true });
   } catch (err) {
     res.send({ message: err, ok: false });
   }
@@ -129,12 +126,12 @@ bidRouter.get("/sales", authValidation, async (req, res) => {
 
 //view special bid
 bidRouter.get("/view", async (req, res) => {
-  const id = req.body.bidID;
-  try {
-    let bid = await bidModel.findOne({ _id: id });
-    let item = await getItem(bid);
+  const bidID = req.body.bidID;
 
-    res.send({ data: { bid, item }, ok: true });
+  try {
+    let bid = await bidModel.findOne({ _id: bidID }).populate("item");
+
+    res.send({ data: bid, ok: true });
   } catch (err) {
     res.send({ message: err, ok: false });
   }
@@ -158,35 +155,5 @@ bidRouter.get("/join", authValidation, async (req, res) => {
     res.send({ message: err, ok: false });
   }
 });
-
-const getItem = async (bid) => {
-  let uID = bid.uID;
-  let itemID = bid.itemID;
-  let requiredItem = null;
-
-  let { inventory } = await userModel.findOne({
-    _id: uID,
-  });
-
-  inventory.forEach((item) => {
-    if (item.id == itemID) {
-      requiredItem = item;
-    }
-  });
-
-  return requiredItem;
-};
-
-const getAllItems = async (bids) => {
-  let bidWithItem = [];
-
-  for (let i = 0; i < bids.length; i++) {
-    let bid = bids[i];
-    let item = await getItem(bid);
-    bidWithItem.push({ bid, item });
-  }
-
-  return bidWithItem;
-};
 
 module.exports = bidRouter;
