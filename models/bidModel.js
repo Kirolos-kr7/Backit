@@ -1,3 +1,4 @@
+const { array } = require("joi");
 const mongoose = require("mongoose"); // connect to db
 const Schema = mongoose.Schema; //build schema
 
@@ -25,6 +26,10 @@ const bidSchema = new Schema(
       type: String,
       required: true,
       lowercase: true,
+    },
+    bidsHistory: {
+      type: Array,
+      default:[]
     },
   },
   { timestamps: true }
