@@ -108,8 +108,6 @@ authRouter.get("/user", authValidation, async (req, res) => {
   let user = res.locals.user;
 
   try {
-    if (!user) return res.send({ message: "User Error", ok: true });
-
     let userData = await userModel.findById({ _id: user.id });
     userData.password = undefined;
 

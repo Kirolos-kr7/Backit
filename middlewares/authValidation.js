@@ -18,9 +18,8 @@ authValidation = async (req, res, next) => {
   jwt.verify(token, process.env.JWT_SECRECT_KEY, {}, async (err, dec) => {
     if (err) return res.send({ message: err.message, ok: false });
     res.locals.user = dec;
+    next();
   });
-
-  next();
 };
 
 module.exports = authValidation;
