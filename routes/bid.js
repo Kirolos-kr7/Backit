@@ -12,7 +12,7 @@ const bidSchema = JOI.object({
   minPrice: JOI.number().required(),
   status: JOI.string().required(),
   bidsHistory: JOI.array().allow(null),
-  uID: JOI.string().required(),
+  user: JOI.string().required(),
   item: JOI.string().required(),
 });
 
@@ -25,7 +25,7 @@ bidRouter.post("/add", authValidation, async (req, res) => {
     minPrice: req.body.minPrice,
     status: req.body.status,
     bidsHistory: [],
-    uID: user.id,
+    user: user.id,
     item: req.body.item,
   };
 
@@ -93,7 +93,10 @@ bidRouter.get("/all", async (req, res) => {
     return res.send({ message: "Invalid bid status", ok: false });
 
   try {
-    let bids = await bidModel.find({ status: bidStatus }).populate("item");
+    let bids = await bidModel
+      .find({ status: bidStatus })
+      .populate("item", "name type description images")
+      .populate("user", "name email profilePicture");
 
     res.send({ data: bids, ok: true });
   } catch (err) {
@@ -106,7 +109,10 @@ bidRouter.get("/sales", authValidation, async (req, res) => {
   let user = res.locals.user;
 
   try {
-    let bids = await bidModel.find({ uID: user.id }).populate("item");
+    let bids = await bidModel
+      .find({ user: user.id })
+      .populate("item", "name type description images")
+      .populate("user", "name email profilePicture");
 
     res.send({ data: bids, ok: true });
   } catch (err) {
@@ -128,8 +134,9 @@ bidRouter.get("/purchases", authValidation, async (req, res) => {
 
   try {
     let bids = await bidModel
-      .find({ uID: user.id, status: bidStatus })
-      .populate("item");
+      .find({ user: user.id, status: bidStatus })
+      .populate("item", "name type description images")
+      .populate("user", "name email profilePicture");
 
     res.send({ data: bids, ok: true });
   } catch (err) {
@@ -143,7 +150,10 @@ bidRouter.get("/view/:bidID", async (req, res) => {
 
   try {
     console.log({ bidID });
-    let bid = await bidModel.findById(bidID).populate("item");
+    let bid = await bidModel
+      .findById(bidID)
+      .populate("item", "name type description images")
+      .populate("user", "name email profilePicture");
 
     res.send({ data: bid, ok: true });
   } catch (err) {
@@ -163,7 +173,7 @@ bidRouter.get("/join", authValidation, async (req, res) => {
     }
     let updatedBid = await bidModel.updateOne(
       { _id: bidID },
-      { $push: { bidsHistory: { uID: user.id, price: bidPrice } } }
+      { $push: { bidsHistory: { user: user.id, price: bidPrice } } }
     );
     if (updatedBid.modifiedCount > 0) {
       res.send({ message: "You Joined the bid", ok: true });

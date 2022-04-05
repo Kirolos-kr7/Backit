@@ -5,7 +5,7 @@ const Schema = mongoose.Schema; //build schema
 //the form of the schema
 const bidSchema = new Schema(
   {
-    item: { type: Schema.Types.ObjectId, ref: "Item" },
+    item: { type: Schema.Types.ObjectId, ref: "Item", required: true },
     minPrice: {
       type: Number,
       required: true,
@@ -18,10 +18,11 @@ const bidSchema = new Schema(
       type: Date,
       required: true,
     },
-    uID: {
-      type: String,
-      required: true,
-    },
+    // uID: {
+    //   type: String,
+    //   required: true,
+    // },
+    user: { type: Schema.Types.ObjectId, ref: "User", required: true },
     status: {
       type: String,
       required: true,
@@ -29,7 +30,7 @@ const bidSchema = new Schema(
     },
     bidsHistory: {
       type: Array,
-      default:[]
+      default: [],
     },
   },
   { timestamps: true }
