@@ -142,7 +142,6 @@ bidRouter.get("/view", async (req, res) => {
   const bidID = req.body.bidID;
 
   try {
-    console.log({ bidID: bidID });
     let bid = await bidModel.findById(bidID).populate("item");
 
     res.send({ data: bid, ok: true });
