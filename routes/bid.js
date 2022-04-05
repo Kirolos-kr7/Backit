@@ -138,8 +138,8 @@ bidRouter.get("/purchases", authValidation, async (req, res) => {
 });
 
 //view special bid
-bidRouter.get("/view", async (req, res) => {
-  const bidID = req.body.bidID;
+bidRouter.get("/view/:bidID", async (req, res) => {
+  const bidID = req.params.bidID;
 
   try {
     console.log({ bidID });
