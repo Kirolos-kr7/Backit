@@ -123,7 +123,7 @@ const createToken = async (user) => {
     { email: user.email, id: user._id },
     process.env.JWT_SECRECT_KEY,
     {
-      expiresIn: "3d",
+      expiresIn: "5s",
     }
   );
 
