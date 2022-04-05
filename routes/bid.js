@@ -1,4 +1,5 @@
 const express = require("express");
+const { string } = require("joi");
 const JOI = require("joi"); //use joi to easier form
 const bidModel = require("../models/bidModel"); //import to bidModel
 const userModel = require("../models/userModel"); //import to userModel
@@ -113,6 +114,31 @@ bidRouter.get("/sales", authValidation, async (req, res) => {
   }
 });
 
+
+bidRouter.get("/purchases", authValidation, async (req, res) => {
+  let user = res.locals.user;
+  let bidStatus = req.body.bidStatus;
+
+  if (
+    bidStatus !== "active" &&
+    bidStatus !== "soon" &&
+    bidStatus !== "expired" &&
+    bidStatus !== "canceled"
+  )
+    return res.send({ message: "Invalid bid status", ok: false });
+
+  try {
+    let bids = await bidModel
+      .find({ uID: user.id, status: bidStatus })
+      .populate("item");
+
+    res.send({ data: bids, ok: true });
+  } catch (err) {
+    res.send({ message: err, ok: false });
+  }
+});
+
+
 //view special bid
 bidRouter.get("/view", async (req, res) => {
   const bidID = req.body.bidID;
@@ -131,15 +157,20 @@ bidRouter.get("/join", authValidation, async (req, res) => {
   let bidID = req.body.bidID;
   let bidPrice = req.body.bidPrice;
 
+
   try {
-    let bid = await bidModel.findOne(
+
+    let bid = await bidModel.findOne({ _id: bidID }).select("status")
+    if (bid.status !== 'active') {
+      return res.send({ message: "Sorry, Bid is not active", ok: false })
+    };
+    let updatedBid = await bidModel.updateOne(
       { _id: bidID },
-      { $push: { bidsHistory: { userID: user.id, price: bidPrice } } }
+      { $push: { bidsHistory: { uID: user.id, price: bidPrice } } }
     );
-
-    res.send(bid);
-
-    res.send({ data: { bid, item }, ok: true });
+    if (updatedBid.modifiedCount > 0) {
+      res.send({ message: "You Joined the bid", ok: true });
+    }
   } catch (err) {
     res.send({ message: err, ok: false });
   }
