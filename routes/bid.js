@@ -114,7 +114,6 @@ bidRouter.get("/sales", authValidation, async (req, res) => {
   }
 });
 
-
 bidRouter.get("/purchases", authValidation, async (req, res) => {
   let user = res.locals.user;
   let bidStatus = req.body.bidStatus;
@@ -138,13 +137,12 @@ bidRouter.get("/purchases", authValidation, async (req, res) => {
   }
 });
 
-
 //view special bid
 bidRouter.get("/view", async (req, res) => {
   const bidID = req.body.bidID;
 
   try {
-    let bid = await bidModel.findOne({ _id: bidID }).populate("item");
+    let bid = await bidModel.findById(bidID).populate("item");
 
     res.send({ data: bid, ok: true });
   } catch (err) {
@@ -157,13 +155,11 @@ bidRouter.get("/join", authValidation, async (req, res) => {
   let bidID = req.body.bidID;
   let bidPrice = req.body.bidPrice;
 
-
   try {
-
-    let bid = await bidModel.findOne({ _id: bidID }).select("status")
-    if (bid.status !== 'active') {
-      return res.send({ message: "Sorry, Bid is not active", ok: false })
-    };
+    let bid = await bidModel.findOne({ _id: bidID }).select("status");
+    if (bid.status !== "active") {
+      return res.send({ message: "Sorry, Bid is not active", ok: false });
+    }
     let updatedBid = await bidModel.updateOne(
       { _id: bidID },
       { $push: { bidsHistory: { uID: user.id, price: bidPrice } } }
