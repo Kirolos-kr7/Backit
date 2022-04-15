@@ -29,6 +29,10 @@ const userSchema = new Schema(
       enum: ["male", "female"],
       required: [true, "User Gender is Required"],
     },
+    status:{type: String,
+      enum: ["admin", "user"],
+      required: [true, "User Gender is Required"],
+    },
     profilePicture: {
       type: String,
       default: null,

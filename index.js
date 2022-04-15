@@ -4,6 +4,7 @@ const mongoose = require("mongoose");
 const itemRouter = require("./routes/item");
 const bidRouter = require("./routes/bid");
 const authRouter = require("./routes/auth");
+const reportRouter = require("./routes/report");
 require("dotenv").config();
 
 const app = express();
@@ -23,6 +24,7 @@ mongoose
 app.use("/auth", authRouter);
 app.use("/item", itemRouter);
 app.use("/bid", bidRouter);
+app.use("/report", reportRouter);
 
 app.get("/", (req, res) => {
   res.send("Running");

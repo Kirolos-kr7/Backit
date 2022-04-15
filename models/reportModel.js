@@ -3,7 +3,7 @@ const Schema = mongoose.Schema; //build schema
 
 //the form of the schema
 const reportSchema = new Schema({
-    repoerterID: { // report maker
+    reporterID: { // report maker
         type: String,
        // required: true
     },

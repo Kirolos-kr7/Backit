@@ -15,11 +15,13 @@ const registerSchema = JOI.object({
   confirmPassword: JOI.ref("password"),
   address: JOI.string().min(2).required(),
   gender: JOI.string().min(4).required(),
+  status: JOI.string().min(4).required(),
   phone: JOI.string().min(6).required(),
   profilePicture: JOI.string().allow(null, ""),
   premium: JOI.object().allow(null, {}),
 });
 
+//login
 const loginSchema = JOI.object({
   email: JOI.string()
     .email({ minDomainSegments: 2, tlds: { allow: ["com", "net", "co"] } })
@@ -38,6 +40,7 @@ authRouter.post("/register", async (req, res) => {
     confirmPassword: req.body.confirmPassword,
     profilePicture: req.body.profilePicture,
     gender: req.body.gender,
+    status: req.body.status,
     premium: req.body.premium,
   };
 
