@@ -5,21 +5,27 @@ const Schema = mongoose.Schema; //build schema
 const reportSchema = new Schema({
     reporterID: { // report maker
         type: String,
-       // required: true
+        // required: true
     },
     recipientID: { // report on
         type: String,
-       // required: true
+        // required: true
     },
-    type:{
-        type:String,
+    type: {
+        type: String,
         required: true
     },
-    description:{
-        type:String,
-        required:true
+    description: {
+        type: String,
+        required: true
+    },
+    status: {
+        type: String,
+        required: true,
+        default: "pending",
+        lowercase: true,
     }
-}, {timestamps: true});
+}, { timestamps: true });
 
 const reportModel = mongoose.model('Report', reportSchema);
 module.exports = reportModel;

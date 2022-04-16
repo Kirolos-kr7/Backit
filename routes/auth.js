@@ -15,7 +15,7 @@ const registerSchema = JOI.object({
   confirmPassword: JOI.ref("password"),
   address: JOI.string().min(2).required(),
   gender: JOI.string().min(4).required(),
-  status: JOI.string().min(4).required(),
+  isAdmin: JOI.boolean(),
   phone: JOI.string().min(6).required(),
   profilePicture: JOI.string().allow(null, ""),
   premium: JOI.object().allow(null, {}),
@@ -40,7 +40,7 @@ authRouter.post("/register", async (req, res) => {
     confirmPassword: req.body.confirmPassword,
     profilePicture: req.body.profilePicture,
     gender: req.body.gender,
-    status: req.body.status,
+    isAdmin: req.body.isAdmin,
     premium: req.body.premium,
   };
 
@@ -123,7 +123,7 @@ authRouter.get("/user", authValidation, async (req, res) => {
 //create a token
 const createToken = async (user) => {
   let token = jwt.sign(
-    { email: user.email, id: user._id },
+    { email: user.email, id: user._id, isAdmin: user.isAdmin },
     process.env.JWT_SECRECT_KEY,
     {
       expiresIn: "3d",
