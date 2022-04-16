@@ -120,6 +120,35 @@ authRouter.get("/user", authValidation, async (req, res) => {
   }
 });
 
+
+//To change UserRole
+authRouter.patch("/user-role", authValidation, async (req, res) => {
+  let user = res.locals.user;
+  let email = req.body.email;
+  if (user.isAdmin) {
+    try {
+
+      let isRegistered = await userModel.findOne({ email });
+      if (!isRegistered)
+        return res.send({ message: "User Not Found", ok: false });
+
+      let updatedUser = await userModel.updateOne({ email }, { isAdmin: !isRegistered.isAdmin });
+      if (updatedUser.modifiedCount > 0) {
+        return res.send({
+          message: "User Role is Changed",
+          ok: true,
+        });
+      }
+
+
+    } catch (err) {
+      return res.send({ message: err, ok: false });
+    }
+  } else { // if not admin
+    res.send({ message: "Access Denied", ok: false });
+  }
+});
+
 //create a token
 const createToken = async (user) => {
   let token = jwt.sign(
