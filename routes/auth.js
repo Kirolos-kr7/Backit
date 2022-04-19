@@ -15,7 +15,7 @@ const registerSchema = JOI.object({
   confirmPassword: JOI.ref("password"),
   address: JOI.string().min(2).required(),
   gender: JOI.string().min(4).required(),
-  status: JOI.string().min(4).required(),
+  isAdmin: JOI.boolean(),
   phone: JOI.string().min(6).required(),
   profilePicture: JOI.string().allow(null, ""),
   premium: JOI.object().allow(null, {}),
@@ -40,7 +40,7 @@ authRouter.post("/register", async (req, res) => {
     confirmPassword: req.body.confirmPassword,
     profilePicture: req.body.profilePicture,
     gender: req.body.gender,
-    status: req.body.status,
+    isAdmin: req.body.isAdmin,
     premium: req.body.premium,
   };
 
@@ -120,10 +120,39 @@ authRouter.get("/user", authValidation, async (req, res) => {
   }
 });
 
+
+//To change UserRole
+authRouter.patch("/user-role", authValidation, async (req, res) => {
+  let user = res.locals.user;
+  let email = req.body.email;
+  if (user.isAdmin) {
+    try {
+
+      let isRegistered = await userModel.findOne({ email });
+      if (!isRegistered)
+        return res.send({ message: "User Not Found", ok: false });
+
+      let updatedUser = await userModel.updateOne({ email }, { isAdmin: !isRegistered.isAdmin });
+      if (updatedUser.modifiedCount > 0) {
+        return res.send({
+          message: "User Role is Changed",
+          ok: true,
+        });
+      }
+
+
+    } catch (err) {
+      return res.send({ message: err, ok: false });
+    }
+  } else { // if not admin
+    res.send({ message: "Access Denied", ok: false });
+  }
+});
+
 //create a token
 const createToken = async (user) => {
   let token = jwt.sign(
-    { email: user.email, id: user._id },
+    { email: user.email, id: user._id, isAdmin: user.isAdmin },
     process.env.JWT_SECRECT_KEY,
     {
       expiresIn: "3d",

@@ -1,3 +1,4 @@
+const { boolean, required, string } = require("joi");
 const mongoose = require("mongoose"); // connect to db
 const Schema = mongoose.Schema; //build schema
 
@@ -29,9 +30,11 @@ const userSchema = new Schema(
       enum: ["male", "female"],
       required: [true, "User Gender is Required"],
     },
-    status:{type: String,
-      enum: ["admin", "user"],
-      required: [true, "User Gender is Required"],
+
+    isAdmin: {
+      type: Boolean,
+      default: false,
+
     },
     profilePicture: {
       type: String,
