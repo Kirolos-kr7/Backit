@@ -82,19 +82,9 @@ bidRouter.delete("/delete", authValidation, async (req, res) => {
 
 //view all bids
 bidRouter.get("/all", async (req, res) => {
-  let bidStatus = req.body.bidStatus;
-
-  if (
-    bidStatus !== "active" &&
-    bidStatus !== "soon" &&
-    bidStatus !== "expired" &&
-    bidStatus !== "canceled"
-  )
-    return res.send({ message: "Invalid bid status", ok: false });
-
   try {
     let bids = await bidModel
-      .find({ status: bidStatus })
+      .find()
       .populate("item", "name type description images")
       .populate("user", "name email profilePicture");
 
