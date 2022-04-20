@@ -94,6 +94,34 @@ bidRouter.get("/all", async (req, res) => {
   }
 });
 
+//view bid by category
+bidRouter.get("/:cat", async (req, res) => {
+  const cat = req.params.cat;
+
+  try {
+    let bids = [];
+    await bidModel
+      .find({})
+      .populate({
+        path: "item",
+        match: { type: cat },
+        select: "name type description images",
+      })
+      .populate("user", "name email profilePicture")
+      .then((response) => {
+        response.forEach((bid) => {
+          console.log(bid.item);
+          if (bid.item !== null) bids.push(bid);
+        });
+      })
+      .then(() => {
+        res.send({ data: bids, ok: true });
+      });
+  } catch (err) {
+    res.send({ message: err, ok: false });
+  }
+});
+
 //view all bids for special user
 bidRouter.get("/sales", authValidation, async (req, res) => {
   let user = res.locals.user;

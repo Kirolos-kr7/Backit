@@ -1,10 +1,11 @@
 {
   "name": "backit",
   "version": "1.0.0",
-  "description": "`npm run dev`",
+  "description": "Bidit backend",
   "main": "index.js",
   "scripts": {
-    "dev": "nodemon index.js"
+    "dev": "nodemon index.js",
+    "deploy": "git push heroku main"
   },
   "repository": {
     "type": "git",
