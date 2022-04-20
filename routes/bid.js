@@ -94,34 +94,6 @@ bidRouter.get("/all", async (req, res) => {
   }
 });
 
-//view bid by category
-bidRouter.get("/:cat", async (req, res) => {
-  const cat = req.params.cat;
-
-  try {
-    let bids = [];
-    await bidModel
-      .find({})
-      .populate({
-        path: "item",
-        match: { type: cat },
-        select: "name type description images",
-      })
-      .populate("user", "name email profilePicture")
-      .then((response) => {
-        response.forEach((bid) => {
-          console.log(bid.item);
-          if (bid.item !== null) bids.push(bid);
-        });
-      })
-      .then(() => {
-        res.send({ data: bids, ok: true });
-      });
-  } catch (err) {
-    res.send({ message: err, ok: false });
-  }
-});
-
 //view all bids for special user
 bidRouter.get("/sales", authValidation, async (req, res) => {
   let user = res.locals.user;
@@ -140,19 +112,10 @@ bidRouter.get("/sales", authValidation, async (req, res) => {
 
 bidRouter.get("/purchases", authValidation, async (req, res) => {
   let user = res.locals.user;
-  let bidStatus = req.body.bidStatus;
-
-  if (
-    bidStatus !== "active" &&
-    bidStatus !== "soon" &&
-    bidStatus !== "expired" &&
-    bidStatus !== "canceled"
-  )
-    return res.send({ message: "Invalid bid status", ok: false });
 
   try {
     let bids = await bidModel
-      .find({ user: user.id, status: bidStatus })
+      .find({ "bidsHistory.userID": user.id })
       .populate("item", "name type description images")
       .populate("user", "name email profilePicture");
 
@@ -196,6 +159,33 @@ bidRouter.get("/join", authValidation, async (req, res) => {
     if (updatedBid.modifiedCount > 0) {
       res.send({ message: "You Joined the bid", ok: true });
     }
+  } catch (err) {
+    res.send({ message: err, ok: false });
+  }
+});
+
+//view bid by category
+bidRouter.get("/:cat", async (req, res) => {
+  const cat = req.params.cat;
+
+  try {
+    let bids = [];
+    await bidModel
+      .find({})
+      .populate({
+        path: "item",
+        match: { type: cat },
+        select: "name type description images",
+      })
+      .populate("user", "name email profilePicture")
+      .then((response) => {
+        response.forEach((bid) => {
+          if (bid.item !== null) bids.push(bid);
+        });
+      })
+      .then(() => {
+        res.send({ data: bids, ok: true });
+      });
   } catch (err) {
     res.send({ message: err, ok: false });
   }
