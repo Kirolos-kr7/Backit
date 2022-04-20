@@ -140,15 +140,6 @@ bidRouter.get("/sales", authValidation, async (req, res) => {
 
 bidRouter.get("/purchases", authValidation, async (req, res) => {
   let user = res.locals.user;
-  let bidStatus = req.body.bidStatus;
-
-  if (
-    bidStatus !== "active" &&
-    bidStatus !== "soon" &&
-    bidStatus !== "expired" &&
-    bidStatus !== "canceled"
-  )
-    return res.send({ message: "Invalid bid status", ok: false });
 
   try {
     let bids = await bidModel
