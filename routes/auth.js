@@ -120,7 +120,7 @@ authRouter.get("/user", authValidation, async (req, res) => {
   try {
     let userData = await userModel.findById({ _id: user.id });
     userData.password = undefined;
-    thisUser.notifications = undefined;
+    userData.notifications = undefined;
 
     res.send({ data: userData, ok: true });
   } catch (err) {
