@@ -162,12 +162,10 @@ authRouter.get("/notifications", authValidation, async (req, res) => {
   let user = res.locals.user;
 
   try {
-    let notifications = await userModel
-      .findById(user._id)
-      .select("notifications");
+    let userData = await userModel.findById(user.id).select("notifications");
 
     return res.send({
-      data: notifications,
+      data: userData.notifications,
       ok: true,
     });
   } catch (err) {
