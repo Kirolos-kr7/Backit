@@ -1,6 +1,6 @@
 const dayjs = require("dayjs");
 const express = require("express");
-const { string } = require("joi");
+const { sendNotification } = require("../utils/notification"); //connect to userModel
 const JOI = require("joi"); //use joi to easier form
 const bidModel = require("../models/bidModel"); //import to bidModel
 const userModel = require("../models/userModel"); //import to userModel
@@ -156,27 +156,42 @@ bidRouter.get("/view/:bidID", async (req, res) => {
   }
 });
 
-bidRouter.get("/join", authValidation, async (req, res) => {
+// Needs to be tested
+bidRouter.patch("/join/:bidID", authValidation, async (req, res) => {
   let user = res.locals.user;
-  let bidID = req.body.bidID;
-  let bidPrice = req.body.bidPrice;
+  let { bidID } = req.params;
+  let { bidPrice } = req.body;
 
   try {
     let bid = await bidModel.findOne({ _id: bidID });
 
+    let highestBid = getHighestBid(await bid);
+
+    if (highestBid.price <= bidPrice)
+      return res.send({ message: "احنا هنستعبط ولا ايه" });
+
     bid.status = calcStatus(bid);
 
-    if (bid.status !== "active") {
+    if (bid.status !== "active")
       return res.send({ message: "Sorry, Bid is not active", ok: false });
-    }
+
     let updatedBid = await bidModel.updateOne(
       { _id: bidID },
       { $push: { bidsHistory: { user: user.id, price: bidPrice } } }
     );
+
     if (updatedBid.modifiedCount > 0) {
+      sendNotification({
+        userID: highestBid.userID,
+        title: "Someone raised the game!",
+        message: `You've been beaten. Put your new price to stay on top`,
+        redirect: `/bid/${bidID}`,
+      });
+
       res.send({ message: "You Joined the bid", ok: true });
     }
   } catch (err) {
+    console.log(err);
     res.send({ message: err, ok: false });
   }
 });
@@ -210,6 +225,20 @@ bidRouter.get("/:cat", async (req, res) => {
     res.send({ message: err, ok: false });
   }
 });
+
+const getHighestBid = (bid) => {
+  let highestBidPrice = bid.minPrice;
+  let highestBid = {};
+
+  bid.bidsHistory.forEach((bid) => {
+    if (bid.price > highestBidPrice) {
+      highestBidPrice = bid.price;
+      highestBid = bid;
+    }
+  });
+
+  return highestBid;
+};
 
 const calcStatus = (bid) => {
   let startDate = dayjs(bid.startDate);
