@@ -2,6 +2,17 @@ const { boolean, required, string } = require("joi");
 const mongoose = require("mongoose"); // connect to db
 const Schema = mongoose.Schema; //build schema
 
+const notificationSchema = new Schema({
+  title: {
+    type: String,
+    required: [true, "Notification Title is Required"],
+  },
+  message: {
+    type: String,
+    required: [true, "Notification Content is Required"],
+  },
+});
+
 //the form of the schema
 const userSchema = new Schema(
   {
@@ -29,12 +40,11 @@ const userSchema = new Schema(
       type: String,
       enum: ["male", "female"],
       required: [true, "User Gender is Required"],
+      lowercase: true,
     },
-
     isAdmin: {
       type: Boolean,
       default: false,
-
     },
     profilePicture: {
       type: String,
@@ -50,6 +60,7 @@ const userSchema = new Schema(
       type: Object,
       default: null,
     },
+    notifications: [notificationSchema],
   },
   { timestamps: true }
 );

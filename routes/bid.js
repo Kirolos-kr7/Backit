@@ -1,3 +1,4 @@
+const dayjs = require("dayjs");
 const express = require("express");
 const { string } = require("joi");
 const JOI = require("joi"); //use joi to easier form
@@ -88,6 +89,10 @@ bidRouter.get("/all", async (req, res) => {
       .populate("item", "name type description images")
       .populate("user", "name email profilePicture");
 
+    for (let i = 0; i < bids.length; i++) {
+      bids[i].status = calcStatus(bids[i]);
+    }
+
     res.send({ data: bids, ok: true });
   } catch (err) {
     res.send({ message: err, ok: false });
@@ -104,6 +109,10 @@ bidRouter.get("/sales", authValidation, async (req, res) => {
       .populate("item", "name type description images")
       .populate("user", "name email profilePicture");
 
+    for (let i = 0; i < bids.length; i++) {
+      bids[i].status = calcStatus(bids[i]);
+    }
+
     res.send({ data: bids, ok: true });
   } catch (err) {
     res.send({ message: err, ok: false });
@@ -119,6 +128,10 @@ bidRouter.get("/purchases", authValidation, async (req, res) => {
       .populate("item", "name type description images")
       .populate("user", "name email profilePicture");
 
+    for (let i = 0; i < bids.length; i++) {
+      bids[i].status = calcStatus(bids[i]);
+    }
+
     res.send({ data: bids, ok: true });
   } catch (err) {
     res.send({ message: err, ok: false });
@@ -130,11 +143,12 @@ bidRouter.get("/view/:bidID", async (req, res) => {
   const bidID = req.params.bidID;
 
   try {
-    console.log({ bidID });
     let bid = await bidModel
       .findById(bidID)
       .populate("item", "name type description images")
       .populate("user", "name email profilePicture");
+
+    bid.status = calcStatus(await bid);
 
     res.send({ data: bid, ok: true });
   } catch (err) {
@@ -148,7 +162,10 @@ bidRouter.get("/join", authValidation, async (req, res) => {
   let bidPrice = req.body.bidPrice;
 
   try {
-    let bid = await bidModel.findOne({ _id: bidID }).select("status");
+    let bid = await bidModel.findOne({ _id: bidID });
+
+    bid.status = calcStatus(bid);
+
     if (bid.status !== "active") {
       return res.send({ message: "Sorry, Bid is not active", ok: false });
     }
@@ -179,9 +196,12 @@ bidRouter.get("/:cat", async (req, res) => {
       })
       .populate("user", "name email profilePicture")
       .then((response) => {
-        response.forEach((bid) => {
-          if (bid.item !== null) bids.push(bid);
-        });
+        for (let i = 0; i < response.length; i++) {
+          if (response[i].item !== null) {
+            response[i].status = calcStatus(response[i]);
+            bids.push(response[i]);
+          }
+        }
       })
       .then(() => {
         res.send({ data: bids, ok: true });
@@ -190,5 +210,18 @@ bidRouter.get("/:cat", async (req, res) => {
     res.send({ message: err, ok: false });
   }
 });
+
+const calcStatus = (bid) => {
+  let startDate = dayjs(bid.startDate);
+  let endDate = dayjs(bid.endDate);
+  let now = dayjs();
+
+  let diffBefore = startDate.diff(now);
+  let diffAfter = endDate.diff(now);
+
+  if (diffBefore > 0) return "soon";
+  if (diffAfter < 0) return "expired";
+  return "active";
+};
 
 module.exports = bidRouter;

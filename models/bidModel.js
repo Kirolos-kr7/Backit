@@ -18,16 +18,7 @@ const bidSchema = new Schema(
       type: Date,
       required: true,
     },
-    // uID: {
-    //   type: String,
-    //   required: true,
-    // },
     user: { type: Schema.Types.ObjectId, ref: "User", required: true },
-    status: {
-      type: String,
-      required: true,
-      lowercase: true,
-    },
     bidsHistory: {
       type: Array,
       default: [],

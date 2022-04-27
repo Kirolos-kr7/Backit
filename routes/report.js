@@ -3,6 +3,7 @@ const reportModel = require("../models/reportModel"); //import to reportModel
 const authValidation = require("../middlewares/authValidation"); //import to validation in middlewares
 const { v4: uuidv4 } = require("uuid"); // build unique id
 const JOI = require("joi"); //use joi to easier form
+const userModel = require("../models/userModel");
 
 const reportRouter = express.Router();
 
@@ -23,8 +24,7 @@ reportRouter.post("/add", authValidation, async (req, res) => {
     reporterID: user.id,
     type: req.body.type,
     description: req.body.description,
-    recipientID: req.body.recipientID
-
+    recipientID: req.body.recipientID,
   };
 
   try {
@@ -55,7 +55,6 @@ reportRouter.delete("/delete", authValidation, async (req, res) => {
   let user = res.locals.user;
   const reportID = req.body.reportID;
   if (user.isAdmin) {
-
     if (!reportID) {
       return res.send({
         message: "report Id Is Required",
@@ -69,7 +68,6 @@ reportRouter.delete("/delete", authValidation, async (req, res) => {
       });
 
       if (deletedreport.deletedCount > 0) {
-
         return res.send({
           message: "report Deleted successfully",
           ok: true,
@@ -78,8 +76,8 @@ reportRouter.delete("/delete", authValidation, async (req, res) => {
     } catch (err) {
       res.send({ message: err, ok: false });
     }
-  }
-  else { // if not admin
+  } else {
+    // if not admin
     res.send({ message: "Access Denied", ok: false });
   }
 });
@@ -89,7 +87,6 @@ reportRouter.patch("/feedback", authValidation, async (req, res) => {
   const reportID = req.body.reportID;
   const status = req.body.status;
   if (user.isAdmin) {
-
     if (!reportID) {
       return res.send({
         message: "report Id Is Required",
@@ -105,13 +102,14 @@ reportRouter.patch("/feedback", authValidation, async (req, res) => {
     }
 
     try {
-      let feedback = await reportModel.updateOne({
-        _id: reportID,
-
-      }, { status });
+      let feedback = await reportModel.updateOne(
+        {
+          _id: reportID,
+        },
+        { status }
+      );
 
       if (feedback.modifiedCount > 0) {
-
         return res.send({
           message: "report updated successfully",
           ok: true,
@@ -120,8 +118,8 @@ reportRouter.patch("/feedback", authValidation, async (req, res) => {
     } catch (err) {
       res.send({ message: err, ok: false });
     }
-  }
-  else { // if not admin
+  } else {
+    // if not admin
     res.send({ message: "Access Denied", ok: false });
   }
 });
@@ -129,14 +127,10 @@ reportRouter.patch("/feedback", authValidation, async (req, res) => {
 reportRouter.get("/all", authValidation, async (req, res) => {
   let user = res.locals.user;
   if (user.isAdmin) {
-
     try {
-      let reports = await reportModel.find()
-
-
+      let reports = await reportModel.find();
 
       if (reports) {
-
         return res.send({
           data: reports,
           ok: true,
@@ -150,8 +144,8 @@ reportRouter.get("/all", authValidation, async (req, res) => {
     } catch (err) {
       res.send({ message: err, ok: false });
     }
-  }
-  else { // if not admin
+  } else {
+    // if not admin
     res.send({ message: "Access Denied", ok: false });
   }
 });
@@ -160,10 +154,9 @@ reportRouter.get("/user", authValidation, async (req, res) => {
   let user = res.locals.user;
 
   try {
-    let reports = await reportModel.find({ reporterID: user.id })
+    let reports = await reportModel.find({ reporterID: user.id });
 
     if (reports) {
-
       return res.send({
         data: reports,
         ok: true,
@@ -177,8 +170,6 @@ reportRouter.get("/user", authValidation, async (req, res) => {
   } catch (err) {
     res.send({ message: err, ok: false });
   }
-
 });
-
 
 module.exports = reportRouter;

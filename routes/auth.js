@@ -1,5 +1,6 @@
 const express = require("express");
 const userModel = require("../models/userModel"); //connect to userModel
+const sendNotification = require("../utils/notification"); //connect to userModel
 const bcrypt = require("bcrypt"); //connect to bcrypt
 const jwt = require("jsonwebtoken"); //connect to jwt
 const authValidation = require("../middlewares/authValidation"); //connect to validation middlware
@@ -40,8 +41,6 @@ authRouter.post("/register", async (req, res) => {
     confirmPassword: req.body.confirmPassword,
     profilePicture: req.body.profilePicture,
     gender: req.body.gender,
-    isAdmin: req.body.isAdmin,
-    premium: req.body.premium,
   };
 
   try {
@@ -58,6 +57,12 @@ authRouter.post("/register", async (req, res) => {
       user.password = hash;
       let thisUser = await userModel.create(user);
       thisUser.password = undefined;
+
+      sendNotification(
+        thisUser._id,
+        "Welcome to Bidit!",
+        `Hello ${thisUser.name} We are deligted to have you aboard.`
+      );
 
       let token = await createToken(thisUser);
       return res.send({
@@ -120,31 +125,31 @@ authRouter.get("/user", authValidation, async (req, res) => {
   }
 });
 
-
 //To change UserRole
 authRouter.patch("/user-role", authValidation, async (req, res) => {
   let user = res.locals.user;
   let email = req.body.email;
   if (user.isAdmin) {
     try {
-
       let isRegistered = await userModel.findOne({ email });
       if (!isRegistered)
         return res.send({ message: "User Not Found", ok: false });
 
-      let updatedUser = await userModel.updateOne({ email }, { isAdmin: !isRegistered.isAdmin });
+      let updatedUser = await userModel.updateOne(
+        { email },
+        { isAdmin: !isRegistered.isAdmin }
+      );
       if (updatedUser.modifiedCount > 0) {
         return res.send({
           message: "User Role is Changed",
           ok: true,
         });
       }
-
-
     } catch (err) {
       return res.send({ message: err, ok: false });
     }
-  } else { // if not admin
+  } else {
+    // if not admin
     res.send({ message: "Access Denied", ok: false });
   }
 });
