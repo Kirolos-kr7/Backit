@@ -1,6 +1,6 @@
 const userModel = require("../models/userModel");
 
-const sendNotification = async (userID, title, message) => {
+const sendNotification = async ({ userID, title, message }) => {
   try {
     let user = await userModel.findById(userID);
 
@@ -15,4 +15,4 @@ const sendNotification = async (userID, title, message) => {
   }
 };
 
-module.exports = sendNotification;
+module.exports = { sendNotification };

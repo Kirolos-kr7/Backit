@@ -11,6 +11,10 @@ const notificationSchema = new Schema({
     type: String,
     required: [true, "Notification Content is Required"],
   },
+  redirect: {
+    type: String,
+    default: null,
+  },
 });
 
 //the form of the schema

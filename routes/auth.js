@@ -1,6 +1,6 @@
 const express = require("express");
 const userModel = require("../models/userModel"); //connect to userModel
-const sendNotification = require("../utils/notification"); //connect to userModel
+const { sendNotification } = require("../utils/notification"); //connect to userModel
 const bcrypt = require("bcrypt"); //connect to bcrypt
 const jwt = require("jsonwebtoken"); //connect to jwt
 const authValidation = require("../middlewares/authValidation"); //connect to validation middlware
@@ -57,12 +57,13 @@ authRouter.post("/register", async (req, res) => {
       user.password = hash;
       let thisUser = await userModel.create(user);
       thisUser.password = undefined;
+      thisUser.notifications = undefined;
 
-      sendNotification(
-        thisUser._id,
-        "Welcome to Bidit!",
-        `Hello ${thisUser.name} We are deligted to have you aboard.`
-      );
+      sendNotification({
+        userID: thisUser._id,
+        title: "Welcome to Bidit!",
+        message: `Hello ${thisUser.name} We are deligted to have you aboard.`,
+      });
 
       let token = await createToken(thisUser);
       return res.send({
@@ -97,6 +98,7 @@ authRouter.post("/login", async (req, res) => {
     bcrypt.compare(user.password, thisUser.password, async (err, result) => {
       if (result) {
         thisUser.password = undefined;
+        thisUser.notifications = undefined;
 
         let token = await createToken(thisUser);
         return res.send({
@@ -118,6 +120,7 @@ authRouter.get("/user", authValidation, async (req, res) => {
   try {
     let userData = await userModel.findById({ _id: user.id });
     userData.password = undefined;
+    thisUser.notifications = undefined;
 
     res.send({ data: userData, ok: true });
   } catch (err) {
@@ -154,7 +157,25 @@ authRouter.patch("/user-role", authValidation, async (req, res) => {
   }
 });
 
-//create a token
+//get user notifications
+authRouter.get("/notifications", authValidation, async (req, res) => {
+  let user = res.locals.user;
+
+  try {
+    let notifications = await userModel
+      .findById(user._id)
+      .select("notifications");
+
+    return res.send({
+      data: notifications,
+      ok: true,
+    });
+  } catch (err) {
+    return res.send({ message: err, ok: false });
+  }
+});
+
+// create a token
 const createToken = async (user) => {
   let token = jwt.sign(
     { email: user.email, id: user._id, isAdmin: user.isAdmin },
