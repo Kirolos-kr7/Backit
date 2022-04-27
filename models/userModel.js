@@ -2,20 +2,27 @@ const { boolean, required, string } = require("joi");
 const mongoose = require("mongoose"); // connect to db
 const Schema = mongoose.Schema; //build schema
 
-const notificationSchema = new Schema({
-  title: {
-    type: String,
-    required: [true, "Notification Title is Required"],
+const notificationSchema = new Schema(
+  {
+    title: {
+      type: String,
+      required: [true, "Notification Title is Required"],
+    },
+    message: {
+      type: String,
+      required: [true, "Notification Content is Required"],
+    },
+    redirect: {
+      type: String,
+      default: null,
+    },
+    seen: {
+      type: Boolean,
+      default: false,
+    },
   },
-  message: {
-    type: String,
-    required: [true, "Notification Content is Required"],
-  },
-  redirect: {
-    type: String,
-    default: null,
-  },
-});
+  { timestamps: true }
+);
 
 //the form of the schema
 const userSchema = new Schema(

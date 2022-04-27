@@ -120,7 +120,6 @@ authRouter.get("/user", authValidation, async (req, res) => {
   try {
     let userData = await userModel.findById({ _id: user.id });
     userData.password = undefined;
-    userData.notifications = undefined;
 
     res.send({ data: userData, ok: true });
   } catch (err) {
@@ -172,6 +171,60 @@ authRouter.get("/notifications", authValidation, async (req, res) => {
     return res.send({ message: err, ok: false });
   }
 });
+
+authRouter.post(
+  "/notifications/broadcast",
+  authValidation,
+  async (req, res) => {
+    let user = res.locals.user;
+    let { title, message } = req.body;
+
+    if (!user.isAdmin) return res.send({ message: "Access Denied", ok: false });
+
+    try {
+      let users = await userModel.find();
+
+      for (let i = 0; i < users.length; i++) {
+        users[i].notifications.push({
+          title,
+          message,
+        });
+
+        await users[i].save();
+      }
+
+      return res.send({
+        message: "Broadcasted Successfully",
+        ok: true,
+      });
+    } catch (err) {
+      return res.send({ message: err, ok: false });
+    }
+  }
+);
+
+authRouter.patch(
+  "/notifications/seen/:ntID",
+  authValidation,
+  async (req, res) => {
+    let user = res.locals.user;
+    let { ntID } = req.params;
+    try {
+      let userData = await userModel.findById(user.id);
+
+      userData.notifications.id(ntID).seen = true;
+      userData.markModified("notifications");
+      await userData.save();
+
+      return res.send({
+        message: "Notification Seen Successfully",
+        ok: true,
+      });
+    } catch (err) {
+      return res.send({ message: err, ok: false });
+    }
+  }
+);
 
 // create a token
 const createToken = async (user) => {
