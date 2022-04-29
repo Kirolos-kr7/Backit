@@ -1,4 +1,3 @@
-const { array } = require("joi");
 const mongoose = require("mongoose"); // connect to db
 const Schema = mongoose.Schema; //build schema
 
@@ -6,6 +5,7 @@ const Schema = mongoose.Schema; //build schema
 const bidSchema = new Schema(
   {
     item: { type: Schema.Types.ObjectId, ref: "Item", required: true },
+    user: { type: Schema.Types.ObjectId, ref: "User", required: true },
     minPrice: {
       type: Number,
       required: true,
@@ -18,7 +18,6 @@ const bidSchema = new Schema(
       type: Date,
       required: true,
     },
-    user: { type: Schema.Types.ObjectId, ref: "User", required: true },
     bidsHistory: {
       type: Array,
       default: [],
