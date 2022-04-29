@@ -10,24 +10,21 @@ const userModel = require("./models/userModel");
 require("dotenv").config();
 
 const app = express();
-const http = require('http');
-const server = http.createServer(app);
+const http = require("http");
+const httpServer = http.createServer(app);
 const { Server } = require("socket.io");
-const io = new Server(server, {
+
+const io = new Server(httpServer, {
   cors: {
-    origins: ["http://localhost:80", "https://localhost:3000", "http://127.0.0.1:4040", "http://127.0.0.1:5000"],
-
-  }
+    origin: true,
+  },
 });
-server.listen(4000, () => {
-  console.log('listening on *:4000');
-});
-io.on('connection', (socket) => {
-  console.log('a user connected');
 
-
-  app.use(express.json());
+io.on("connection", (socket) => {
+  console.log("a user connected");
 });
+
+app.use(express.json());
 app.use(cors());
 
 // connect to mongodb & listen for requests
@@ -51,6 +48,6 @@ app.get("/", (req, res) => {
 
 let port = process.env.PORT || 8080;
 
-app.listen(port, () => {
+httpServer.listen(port, () => {
   console.log("Listenting on Port " + port);
 });
