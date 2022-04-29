@@ -177,7 +177,7 @@ authRouter.post(
   authValidation,
   async (req, res) => {
     let user = res.locals.user;
-    let { title, message } = req.body;
+    let { title, message, redirect } = req.body;
 
     if (!user.isAdmin) return res.send({ message: "Access Denied", ok: false });
 
@@ -188,6 +188,7 @@ authRouter.post(
         users[i].notifications.push({
           title,
           message,
+          redirect,
         });
 
         await users[i].save();

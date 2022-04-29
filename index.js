@@ -10,7 +10,24 @@ const userModel = require("./models/userModel");
 require("dotenv").config();
 
 const app = express();
-app.use(express.json());
+const http = require('http');
+const server = http.createServer(app);
+const { Server } = require("socket.io");
+const io = new Server(server, {
+  cors: {
+    origins: ["http://localhost:80", "https://localhost:3000", "http://127.0.0.1:4040", "http://127.0.0.1:5000"],
+
+  }
+});
+server.listen(4000, () => {
+  console.log('listening on *:4000');
+});
+io.on('connection', (socket) => {
+  console.log('a user connected');
+
+
+  app.use(express.json());
+});
 app.use(cors());
 
 // connect to mongodb & listen for requests
