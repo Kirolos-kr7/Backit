@@ -6,29 +6,32 @@ const initSocket = (socket) => {
   console.log("a user connected");
   socket.on("pageLoaded", async (bidID) => {
     try {
+      if (bidID.length !== 24) return socket.emit("bidNotFound");
+
       let bid = await bidModel
         .findById(bidID)
         .populate("item", "name type description images")
         .populate("user", "name email profilePicture");
 
-      bid.status = calcStatus(await bid);
-      if (bid) socket.emit("bidFound", bid);
-      else socket.emit("bidNotFound");
+      if (!bid) socket.emit("bidNotFound");
+      else {
+        bid.status = calcStatus(await bid);
+        socket.emit("bidFound", bid);
+      }
     } catch (err) {
       console.log(err);
     }
   });
   socket.on("joinBid", async (data) => {
     let { newPrice, user, bidID } = data;
-    console.log({ newPrice, user, bidID });
 
     try {
       let bid = await bidModel.findOne({ _id: bidID });
 
       let highestBid = getHighestBid(await bid);
 
-      console.log(highestBid.price);
-      if (highestBid.price <= newPrice)
+      console.log(newPrice);
+      if (highestBid.price >= newPrice)
         return socket.emit(
           "bidError",
           "Price you enter it must be more than current price"
@@ -39,26 +42,25 @@ const initSocket = (socket) => {
       if (bid.status !== "active")
         return socket.emit("bidError", "Sorry, Bid is not active");
 
-      /*
-    let updatedBid = await bidModel.updateOne(
-      { _id: bidID },
-      { $push: { bidsHistory: { user: user.id, price: bidPrice } } }
-    );
+      let updatedBid = await bidModel.updateOne(
+        { _id: bidID },
+        { $push: { bidsHistory: { user: user.id, price: newPrice } } }
+      );
 
-    if (updatedBid.modifiedCount > 0) {
-      sendNotification({
-        userID: highestBid.userID,
-        title: "Someone raised the game!",
-        message: `You've been beaten. Put your new price to stay on top`,
-        redirect: `/bid/${bidID}`,
-      });
+      if (updatedBid.modifiedCount > 0) {
+        fetchBid(bidID, socket);
 
-      res.send({ message: "You Joined the bid", ok: true });
-      
-    }*/
+        if (highestBid.user) {
+          sendNotification({
+            userID: highestBid.user,
+            title: "Someone raised the game!",
+            message: `You've been beaten. Put your new price to stay on top`,
+            redirect: `/bid/${bidID}`,
+          });
+        }
+      }
     } catch (err) {
       console.log(err);
-      res.send({ message: err, ok: false });
     }
   });
 };
@@ -72,6 +74,7 @@ const calcStatus = (bid) => {
   let diffAfter = endDate.diff(now);
 
   if (diffBefore > 0) return "soon";
+
   if (diffAfter < 0) return "expired";
   return "active";
 };
@@ -80,16 +83,26 @@ const getHighestBid = (bid) => {
   if (bid.bidsHistory.length < 1) return { user: null, price: bid.minPrice };
 
   let highestBidPrice = bid.minPrice;
-  let highestBid = {};
 
-  bid.bidsHistory.forEach((bid) => {
-    if (bid.price > highestBidPrice) {
-      highestBidPrice = bid.price;
-      highestBid = bid;
+  if (bid.bidsHistory[0].price > highestBidPrice) return bid.bidsHistory[0];
+  else return highestBidPrice;
+};
+
+const fetchBid = async (bidID, socket) => {
+  try {
+    let bid = await bidModel
+      .findById(bidID)
+      .populate("item", "name type description images")
+      .populate("user", "name email profilePicture");
+
+    if (!bid) socket.emit("bidNotFound");
+    else {
+      bid.status = calcStatus(await bid);
+      socket.emit("bidFound", bid);
     }
-  });
-
-  return highestBid;
+  } catch (err) {
+    console.log(err);
+  }
 };
 
 module.exports = { initSocket, calcStatus, getHighestBid };
