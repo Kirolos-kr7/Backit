@@ -1,6 +1,6 @@
-const bidModel = require("./models/bidModel");
+const bidModel = require("../models/bidModel");
 const dayjs = require("dayjs");
-const { sendNotification } = require("../utils/notification");
+const { sendNotification } = require("./notification");
 
 const initSocket = (socket) => {
   console.log("a user connected");
