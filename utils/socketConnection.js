@@ -24,14 +24,13 @@ const initSocket = (socket) => {
   });
 
   socket.on("joinBid", async (data) => {
-    let { newPrice, user, bidID } = data;
+    let { newPrice, userID, bidID } = data;
 
     try {
       let bid = await bidModel.findOne({ _id: bidID });
 
       let highestBid = getHighestBid(await bid);
 
-      console.log(newPrice);
       if (highestBid.price >= newPrice)
         return socket.emit(
           "bidError",
@@ -45,7 +44,7 @@ const initSocket = (socket) => {
 
       let updatedBid = await bidModel.updateOne(
         { _id: bidID },
-        { $push: { bidsHistory: { user: user._id, price: newPrice } } }
+        { $push: { bidsHistory: { user: userID, price: newPrice } } }
       );
 
       if (updatedBid.modifiedCount > 0) {
