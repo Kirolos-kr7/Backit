@@ -22,6 +22,7 @@ const initSocket = (socket) => {
       console.log(err);
     }
   });
+
   socket.on("joinBid", async (data) => {
     let { newPrice, user, bidID } = data;
 
@@ -44,7 +45,7 @@ const initSocket = (socket) => {
 
       let updatedBid = await bidModel.updateOne(
         { _id: bidID },
-        { $push: { bidsHistory: { user: user.id, price: newPrice } } }
+        { $push: { bidsHistory: { user: user._id, price: newPrice } } }
       );
 
       if (updatedBid.modifiedCount > 0) {

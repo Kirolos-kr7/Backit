@@ -88,11 +88,9 @@ bidRouter.get("/all", async (req, res) => {
       .populate("item", "name type description images")
       .populate("user", "name email profilePicture");
 
-    for (let i = 0; i < bids.length; i++) {
-      bids[i].status = calcStatus(bids[i]);
-    }
+    let BWS = bidsWithStatus(bids);
 
-    res.send({ data: bids, ok: true });
+    res.send({ data: BWS, ok: true });
   } catch (err) {
     res.send({ message: err, ok: false });
   }
@@ -108,11 +106,9 @@ bidRouter.get("/sales", authValidation, async (req, res) => {
       .populate("item", "name type description images")
       .populate("user", "name email profilePicture");
 
-    for (let i = 0; i < bids.length; i++) {
-      bids[i].status = calcStatus(bids[i]);
-    }
+    let BWS = bidsWithStatus(bids);
 
-    res.send({ data: bids, ok: true });
+    res.send({ data: BWS, ok: true });
   } catch (err) {
     res.send({ message: err, ok: false });
   }
@@ -127,44 +123,58 @@ bidRouter.get("/purchases", authValidation, async (req, res) => {
       .populate("item", "name type description images")
       .populate("user", "name email profilePicture");
 
-    for (let i = 0; i < bids.length; i++) {
-      bids[i].status = calcStatus(bids[i]);
-    }
+    let BWS = bidsWithStatus(bids);
 
-    res.send({ data: bids, ok: true });
+    res.send({ data: BWS, ok: true });
   } catch (err) {
     res.send({ message: err, ok: false });
   }
 });
 
-//get bids by category
+//get bids by category ## ERRORRRRR
+// Needs to be completed
 bidRouter.get("/:cat", async (req, res) => {
   const cat = req.params.cat;
 
   try {
-    let bids = [];
-    await bidModel
+    let bids = await bidModel
       .find({})
       .populate({
         path: "item",
         match: { type: cat },
         select: "name type description images",
       })
-      .populate("user", "name email profilePicture")
-      .then((response) => {
-        for (let i = 0; i < response.length; i++) {
-          if (response[i].item !== null) {
-            response[i].status = calcStatus(response[i]);
-            bids.push(response[i]);
-          }
-        }
-      })
-      .then(() => {
-        res.send({ data: bids, ok: true });
-      });
+      .populate("user", "name email profilePicture");
+
+    let BWS = bidsWithStatus(bids);
+
+    res.send({ data: BWS, ok: true });
   } catch (err) {
     res.send({ message: err, ok: false });
   }
 });
+
+const bidsWithStatus = (bids) => {
+  let xBids = [];
+
+  bids.forEach((bid) => {
+    let newBid = {
+      status: calcStatus(bid),
+      item: bid.item,
+      user: bid.user,
+      _id: bid._id,
+      minPrice: bid.minPrice,
+      startDate: bid.startDate,
+      endDate: bid.endDate,
+      bidsHistory: bid.bidsHistory,
+      createdAt: bid.createdAt,
+      updatedAt: bid.updatedAt,
+      __v: bid.__v,
+    };
+    xBids.push(newBid);
+  });
+
+  return xBids;
+};
 
 module.exports = bidRouter;
