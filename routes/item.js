@@ -47,7 +47,7 @@ itemRouter.post("/add", authValidation, async (req, res) => {
         ok: true,
       });
   } catch (err) {
-    res.send({ message: err, ok: false });
+    console.log(err);
   }
 });
 
@@ -77,7 +77,7 @@ itemRouter.delete("/delete", authValidation, async (req, res) => {
       });
     }
   } catch (err) {
-    res.send({ message: err, ok: false });
+    console.log(err);
   }
 });
 
@@ -115,7 +115,7 @@ itemRouter.patch("/edit", authValidation, async (req, res) => {
         });
     }
   } catch (err) {
-    res.send({ message: err, ok: false });
+    console.log(err);
   }
 });
 
@@ -127,7 +127,7 @@ itemRouter.get("/all", authValidation, async (req, res) => {
 
     res.send({ data: allItems, ok: true });
   } catch (err) {
-    res.send({ message: err, ok: false });
+    console.log(err);
   }
 });
 

@@ -48,7 +48,7 @@ bidRouter.post("/add", authValidation, async (req, res) => {
       });
     }
   } catch (err) {
-    res.send({ message: err, ok: false });
+    console.log(err);
   }
 });
 
@@ -76,7 +76,7 @@ bidRouter.delete("/delete", authValidation, async (req, res) => {
       });
     }
   } catch (err) {
-    res.send({ message: err, ok: false });
+    console.log(err);
   }
 });
 
@@ -92,7 +92,7 @@ bidRouter.get("/all", async (req, res) => {
 
     res.send({ data: BWS, ok: true });
   } catch (err) {
-    res.send({ message: err, ok: false });
+    console.log(err);
   }
 });
 
@@ -110,7 +110,7 @@ bidRouter.get("/sales", authValidation, async (req, res) => {
 
     res.send({ data: BWS, ok: true });
   } catch (err) {
-    res.send({ message: err, ok: false });
+    console.log(err);
   }
 });
 
@@ -127,7 +127,7 @@ bidRouter.get("/purchases", authValidation, async (req, res) => {
 
     res.send({ data: BWS, ok: true });
   } catch (err) {
-    res.send({ message: err, ok: false });
+    console.log(err);
   }
 });
 
@@ -150,7 +150,7 @@ bidRouter.get("/:cat", async (req, res) => {
 
     res.send({ data: BWS, ok: true });
   } catch (err) {
-    res.send({ message: err, ok: false });
+    console.log(err);
   }
 });
 
