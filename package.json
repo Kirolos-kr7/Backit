@@ -19,6 +19,7 @@
   "homepage": "https://github.com/Kirolos-kr7/Backit#readme",
   "dependencies": {
     "bcrypt": "^5.0.1",
+    "child_process": "^1.0.2",
     "cors": "^2.8.5",
     "dayjs": "^1.11.1",
     "dotenv": "^16.0.0",

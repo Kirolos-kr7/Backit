@@ -3,6 +3,7 @@ const express = require("express");
 const JOI = require("joi"); //use joi to easier form
 const bidModel = require("../models/bidModel"); //import to bidModel
 const { calcStatus } = require("../utils/socketConnection");
+const spawn = require("child_process").spawn;
 
 const bidRouter = express.Router();
 
@@ -78,6 +79,47 @@ bidRouter.delete("/delete", authValidation, async (req, res) => {
   } catch (err) {
     res.send({ message: err, ok: false });
   }
+});
+
+bidRouter.get("/rec", (req, res) => {
+  let data = [
+    { bidderID: "user-1", bidID: "bid_1", viewed: 1 },
+    { bidderID: "user-2", bidID: "bid_2", viewed: 1 },
+    { bidderID: "user-3", bidID: "bid_3", viewed: 1 },
+    { bidderID: "user-3", bidID: "bid_2", viewed: 1 },
+    { bidderID: "user-3", bidID: "bid_1", viewed: 1 },
+    { bidderID: "user-4", bidID: "bid_1", viewed: 1 },
+    { bidderID: "user-5", bidID: "bid_1", viewed: 1 },
+    { bidderID: "user-6", bidID: "bid_1", viewed: 1 },
+    { bidderID: "user-1", bidID: "bid_1", viewed: 1 },
+    { bidderID: "user-2", bidID: "bid_2", viewed: 1 },
+    { bidderID: "user-3", bidID: "bid_3", viewed: 1 },
+    { bidderID: "user-3", bidID: "bid_2", viewed: 1 },
+    { bidderID: "user-3", bidID: "bid_1", viewed: 1 },
+    { bidderID: "user-4", bidID: "bid_4", viewed: 1 },
+    { bidderID: "user-5", bidID: "bid_1", viewed: 1 },
+    { bidderID: "user-6", bidID: "bid_5", viewed: 1 },
+    { bidderID: "user-1", bidID: "bid_1", viewed: 1 },
+    { bidderID: "user-2", bidID: "bid_2", viewed: 1 },
+    { bidderID: "user-3", bidID: "bid_3", viewed: 1 },
+    { bidderID: "user-3", bidID: "bid_2", viewed: 1 },
+    { bidderID: "user-3", bidID: "bid_5", viewed: 1 },
+    { bidderID: "user-4", bidID: "bid_6", viewed: 1 },
+    { bidderID: "user-5", bidID: "bid_1", viewed: 1 },
+    { bidderID: "user-6", bidID: "bid_4", viewed: 1 },
+  ];
+
+  let xData = JSON.stringify(data);
+  console.log("App Start");
+  const pythonProcess = spawn("python", [
+    "./Collaborative_Filtering.py",
+    xData,
+    "user-1",
+  ]);
+
+  pythonProcess.stdout.on("data", (data) => {
+    console.log(data.toString());
+  });
 });
 
 //view all bids

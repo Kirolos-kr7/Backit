@@ -8,6 +8,7 @@ const reportRouter = require("./routes/report");
 const adminRouter = require("./routes/admin");
 const { Server } = require("socket.io");
 const { initSocket } = require("./utils/socketConnection");
+
 require("dotenv").config();
 
 const app = express();
