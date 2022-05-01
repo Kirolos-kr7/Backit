@@ -5,6 +5,7 @@ const itemRouter = require("./routes/item");
 const bidRouter = require("./routes/bid");
 const authRouter = require("./routes/auth");
 const reportRouter = require("./routes/report");
+const adminRouter = require("./routes/admin");
 const { Server } = require("socket.io");
 const { initSocket } = require("./utils/socketConnection");
 require("dotenv").config();
@@ -30,6 +31,7 @@ app.use("/auth", authRouter);
 app.use("/item", itemRouter);
 app.use("/bid", bidRouter);
 app.use("/report", reportRouter);
+app.use("/admin", adminRouter);
 
 app.get("/", (req, res) => {
   res.send("Running");
