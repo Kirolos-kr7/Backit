@@ -46,7 +46,7 @@ reportRouter.post("/add", authValidation, async (req, res) => {
         ok: true,
       });
   } catch (err) {
-    res.send({ message: err, ok: false });
+    console.log(err);
   }
 });
 
@@ -74,7 +74,7 @@ reportRouter.delete("/delete", authValidation, async (req, res) => {
         });
       }
     } catch (err) {
-      res.send({ message: err, ok: false });
+      console.log(err);
     }
   } else {
     // if not admin
@@ -116,7 +116,7 @@ reportRouter.patch("/feedback", authValidation, async (req, res) => {
         });
       }
     } catch (err) {
-      res.send({ message: err, ok: false });
+      console.log(err);
     }
   } else {
     // if not admin
@@ -142,7 +142,7 @@ reportRouter.get("/all", authValidation, async (req, res) => {
         });
       }
     } catch (err) {
-      res.send({ message: err, ok: false });
+      console.log(err);
     }
   } else {
     // if not admin
@@ -168,7 +168,7 @@ reportRouter.get("/user", authValidation, async (req, res) => {
       });
     }
   } catch (err) {
-    res.send({ message: err, ok: false });
+    console.log(err);
   }
 });
 

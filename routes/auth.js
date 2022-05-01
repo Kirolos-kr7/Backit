@@ -73,7 +73,7 @@ authRouter.post("/register", async (req, res) => {
       });
     });
   } catch (err) {
-    return res.send({ message: err, ok: false });
+    console.log(err);
   }
 });
 
@@ -109,7 +109,7 @@ authRouter.post("/login", async (req, res) => {
       } else return res.send({ message: "User Password Incorrect", ok: false });
     });
   } catch (err) {
-    return res.send({ message: err, ok: false });
+    console.log(err);
   }
 });
 
@@ -123,7 +123,7 @@ authRouter.get("/user", authValidation, async (req, res) => {
 
     res.send({ data: userData, ok: true });
   } catch (err) {
-    return res.send({ message: err, ok: false });
+    console.log(err);
   }
 });
 
@@ -148,7 +148,7 @@ authRouter.patch("/user-role", authValidation, async (req, res) => {
         });
       }
     } catch (err) {
-      return res.send({ message: err, ok: false });
+      console.log(err);
     }
   } else {
     // if not admin
@@ -168,7 +168,7 @@ authRouter.get("/notifications", authValidation, async (req, res) => {
       ok: true,
     });
   } catch (err) {
-    return res.send({ message: err, ok: false });
+    console.log(err);
   }
 });
 
@@ -199,7 +199,7 @@ authRouter.post(
         ok: true,
       });
     } catch (err) {
-      return res.send({ message: err, ok: false });
+      console.log(err);
     }
   }
 );
@@ -222,7 +222,7 @@ authRouter.patch(
         ok: true,
       });
     } catch (err) {
-      return res.send({ message: err, ok: false });
+      console.log(err);
     }
   }
 );
