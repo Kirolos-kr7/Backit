@@ -4,8 +4,11 @@ const { sendNotification } = require("./notification");
 
 const initSocket = (socket) => {
   console.log("a user connected");
+
   socket.on("pageLoaded", async (bidID) => {
     try {
+      socket.join(bidID);
+
       if (bidID.length !== 24) return socket.emit("bidNotFound");
 
       let bid = await bidModel
@@ -98,6 +101,7 @@ const fetchBid = async (bidID, socket) => {
     if (!bid) socket.emit("bidNotFound");
     else {
       bid.status = calcStatus(await bid);
+      socket.broadcast.to(bidID).emit("bidFound", bid);
       socket.emit("bidFound", bid);
     }
   } catch (err) {
