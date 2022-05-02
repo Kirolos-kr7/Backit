@@ -66,7 +66,7 @@ adminRouter.get("/reports", authValidation, async (req, res) => {
     let users = await userModel
       .find()
       .sort([[sortBy, dir]])
-      .select("name email isAdmin");
+      .select("_id type status");
 
     res.send({ data: users, ok: true });
   } catch (err) {
@@ -74,27 +74,27 @@ adminRouter.get("/reports", authValidation, async (req, res) => {
   }
 });
 
-adminRouter.get("/orders", authValidation, async (req, res) => {
-  let user = res.locals.user;
-  let { sortBy, dir } = req.query;
+// adminRouter.get("/orders", authValidation, async (req, res) => {
+//   let user = res.locals.user;
+//   let { sortBy, dir } = req.query;
 
-  if (!sortBy) sortBy = "name";
-  if (!dir) dir = "asc";
+//   if (!sortBy) sortBy = "name";
+//   if (!dir) dir = "asc";
 
-  try {
-    if (!user.isAdmin)
-      return res.send({ message: "Access Denied!", ok: false });
+//   try {
+//     if (!user.isAdmin)
+//       return res.send({ message: "Access Denied!", ok: false });
 
-    let users = await userModel
-      .find()
-      .sort([[sortBy, dir]])
-      .select("name email address isAdmin");
+//     let users = await userModel
+//       .find()
+//       .sort([[sortBy, dir]])
+//       .select("name email address isAdmin");
 
-    res.send({ data: users, ok: true });
-  } catch (err) {
-    console.log(err);
-  }
-});
+//     res.send({ data: users, ok: true });
+//   } catch (err) {
+//     console.log(err);
+//   }
+// });
 
 const bidsWithStatus = (bids) => {
   let xBids = [];
