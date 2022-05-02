@@ -41,7 +41,7 @@ bid_bid_sim_matrix['bidID'] = bidder_bid_matrix.T.index
 bid_bid_sim_matrix = bid_bid_sim_matrix.set_index('bidID')
 
 # similar_bids on bid page
-bid_id = sys.argv[6666666666666666666]
+bid_id = sys.argv[2]
 top_4_similar_bids = list(
     bid_bid_sim_matrix
     .loc[bid_id]
@@ -50,6 +50,13 @@ top_4_similar_bids = list(
     .index
 )
 
+result = ''
+for bid in top_4_similar_bids:
+    result += (bid + ' ')
 
-print(top_4_similar_bids)
-sys.stdout.flush()
+if(not result):
+    print('N/F')
+    sys.stdout.flush()
+else:
+    print(result)
+    sys.stdout.flush()

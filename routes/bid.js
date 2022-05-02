@@ -1,6 +1,7 @@
 const dayjs = require("dayjs");
 const express = require("express");
 const JOI = require("joi"); //use joi to easier form
+const analyticsModel = require("../models/analyticsModel");
 const bidModel = require("../models/bidModel"); //import to bidModel
 const spawn = require("child_process").spawn;
 
@@ -17,7 +18,7 @@ const bidSchema = JOI.object({
 });
 
 bidRouter.post("/add", authValidation, async (req, res) => {
-  let user = res.locals.user;
+  let { user } = res.locals;
 
   let bid = {
     startDate: req.body.startDate,
@@ -168,44 +169,57 @@ bidRouter.delete("/delete/:bidID", authValidation, async (req, res) => {
   }
 });
 
-bidRouter.get("/rec", (req, res) => {
-  let data = [
-    { bidderID: "user-1", bidID: "bid_1", viewed: 1 },
-    { bidderID: "user-2", bidID: "bid_2", viewed: 1 },
-    { bidderID: "user-3", bidID: "bid_3", viewed: 1 },
-    { bidderID: "user-3", bidID: "bid_2", viewed: 1 },
-    { bidderID: "user-3", bidID: "bid_1", viewed: 1 },
-    { bidderID: "user-4", bidID: "bid_1", viewed: 1 },
-    { bidderID: "user-5", bidID: "bid_1", viewed: 1 },
-    { bidderID: "user-6", bidID: "bid_1", viewed: 1 },
-    { bidderID: "user-1", bidID: "bid_1", viewed: 1 },
-    { bidderID: "user-2", bidID: "bid_2", viewed: 1 },
-    { bidderID: "user-3", bidID: "bid_3", viewed: 1 },
-    { bidderID: "user-3", bidID: "bid_2", viewed: 1 },
-    { bidderID: "user-3", bidID: "bid_1", viewed: 1 },
-    { bidderID: "user-4", bidID: "bid_4", viewed: 1 },
-    { bidderID: "user-5", bidID: "bid_1", viewed: 1 },
-    { bidderID: "user-6", bidID: "bid_5", viewed: 1 },
-    { bidderID: "user-1", bidID: "bid_1", viewed: 1 },
-    { bidderID: "user-2", bidID: "bid_2", viewed: 1 },
-    { bidderID: "user-3", bidID: "bid_3", viewed: 1 },
-    { bidderID: "user-3", bidID: "bid_2", viewed: 1 },
-    { bidderID: "user-3", bidID: "bid_5", viewed: 1 },
-    { bidderID: "user-4", bidID: "bid_6", viewed: 1 },
-    { bidderID: "user-5", bidID: "bid_1", viewed: 1 },
-    { bidderID: "user-6", bidID: "bid_4", viewed: 1 },
-  ];
+bidRouter.get("/recommended", authValidation, async (req, res) => {
+  let { user } = res.locals;
 
-  let xData = JSON.stringify(data);
-  console.log("App Start");
+  let analytics = await analyticsModel.find().select({ _id: 0 });
+  let jsonAnalytics = JSON.stringify(analytics);
+
   const pythonProcess = spawn("python", [
-    "./Collaborative_Filtering.py",
-    xData,
-    "user-1",
+    "./recommendation_engine/you_might_like.py",
+    jsonAnalytics,
+    user.id,
   ]);
 
-  pythonProcess.stdout.on("data", (data) => {
+  pythonProcess.stdout.on("data", async (data) => {
+    let result = data.toString().trim();
+    console.log(result);
+    if (result != "N/F") {
+      let bidIds = result.split(" ");
+      let similarBids = await bidModel.find().where("_id").in(bidIds);
+      return res.send({ data: similarBids, ok: true });
+    } else {
+      return res.send({ message: "No Data Found", ok: false });
+    }
+  });
+
+  pythonProcess.stderr.on("data", (data) => {
     console.log(data.toString());
+  });
+});
+
+bidRouter.get("/smilar/:bidID", async (req, res) => {
+  let { bidID } = req.params;
+
+  let analytics = await analyticsModel.find().select({ _id: 0 });
+  let jsonAnalytics = JSON.stringify(analytics);
+
+  const pythonProcess = spawn("python", [
+    "./recommendation_engine/similar_bids.py",
+    jsonAnalytics,
+    bidID,
+  ]);
+
+  pythonProcess.stdout.on("data", async (data) => {
+    let result = data.toString().trim();
+
+    if (result != "N/F") {
+      let bidIds = result.split(" ");
+      let similarBids = await bidModel.find().where("_id").in(bidIds);
+      return res.send({ data: similarBids, ok: true });
+    } else {
+      return res.send({ message: "No Data Found", ok: false });
+    }
   });
 });
 

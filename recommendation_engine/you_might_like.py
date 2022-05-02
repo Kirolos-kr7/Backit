@@ -54,7 +54,6 @@ top_similar_bidders = list(
 )
 
 
-
 items_viewed_bysimilar_bidder = list()
 for i in top_similar_bidders:
     items_viewed_bysimilar_bidder.extend(
@@ -75,6 +74,14 @@ items_to_recommend_User_A = [
 
 bids_to_send = items_to_recommend_User_A[:4]
 
+result = ''
+for bid in bids_to_send:
+    result += (bid + ' ')
 
-print(bids_to_send)
-sys.stdout.flush()
+
+if(not result):
+    print('N/F')
+    sys.stdout.flush()
+else:
+    print(result)
+    sys.stdout.flush()
