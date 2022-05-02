@@ -5,6 +5,28 @@ const { calcStatus } = require("../utils/socketConnection");
 
 const adminRouter = express.Router();
 
+adminRouter.get("/users", authValidation, async (req, res) => {
+  let user = res.locals.user;
+  let { sortBy, dir } = req.query;
+
+  if (!sortBy) sortBy = "name";
+  if (!dir) dir = "asc";
+
+  try {
+    if (!user.isAdmin)
+      return res.send({ message: "Access Denied!", ok: false });
+
+    let users = await userModel
+      .find()
+      .sort([[sortBy, dir]])
+      .select("name email isAdmin");
+
+    res.send({ data: users, ok: true });
+  } catch (err) {
+    console.log(err);
+  }
+});
+
 adminRouter.get("/bids", authValidation, async (req, res) => {
   let user = res.locals.user;
   let { sortBy, dir } = req.query;
@@ -22,6 +44,28 @@ adminRouter.get("/bids", authValidation, async (req, res) => {
     let BWS = bidsWithStatus(bids);
 
     res.send({ data: BWS, ok: true });
+  } catch (err) {
+    console.log(err);
+  }
+});
+
+adminRouter.get("/reports", authValidation, async (req, res) => {
+  let user = res.locals.user;
+  let { sortBy, dir } = req.query;
+
+  if (!sortBy) sortBy = "name";
+  if (!dir) dir = "asc";
+
+  try {
+    if (!user.isAdmin)
+      return res.send({ message: "Access Denied!", ok: false });
+
+    let users = await userModel
+      .find()
+      .sort([[sortBy, dir]])
+      .select("name email isAdmin");
+
+    res.send({ data: users, ok: true });
   } catch (err) {
     console.log(err);
   }
