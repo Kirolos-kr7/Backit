@@ -2,7 +2,6 @@ const dayjs = require("dayjs");
 const express = require("express");
 const JOI = require("joi"); //use joi to easier form
 const bidModel = require("../models/bidModel"); //import to bidModel
-const { calcStatus } = require("../utils/socketConnection");
 const spawn = require("child_process").spawn;
 
 const bidRouter = express.Router();
@@ -11,7 +10,7 @@ const bidSchema = JOI.object({
   startDate: JOI.date().required(),
   endDate: JOI.date().required(),
   minPrice: JOI.number().required(),
-  status: JOI.string().required(),
+  status: JOI.string(),
   bidsHistory: JOI.array().allow(null),
   user: JOI.string().required(),
   item: JOI.string().required(),
@@ -24,11 +23,21 @@ bidRouter.post("/add", authValidation, async (req, res) => {
     startDate: req.body.startDate,
     endDate: req.body.endDate,
     minPrice: req.body.minPrice,
-    status: req.body.status,
-    bidsHistory: [],
     user: user.id,
     item: req.body.item,
   };
+
+  let now = dayjs();
+  let startDate = dayjs(bid.startDate);
+  let diffStart = startDate.diff(now, "ms");
+
+  let endDate = dayjs(bid.endDate);
+  let diffEnd = endDate.diff(now, "ms");
+
+  if (diffStart < 0)
+    return res.send({ message: "Invalid Start Date", ok: false });
+
+  if (diffEnd < 0) return res.send({ message: "Invalid End Date", ok: false });
 
   try {
     await bidSchema.validateAsync(bid);
@@ -38,25 +47,84 @@ bidRouter.post("/add", authValidation, async (req, res) => {
       ok: false,
     });
   }
+
   try {
     let newBid = await bidModel.create(bid);
 
     if (newBid) {
-      return res.send({
-        data: newBid,
-        message: "Added bid successfully",
-        ok: true,
-      });
+      changeBidStatus("active", diffStart, newBid._id);
+      changeBidStatus("expired", diffEnd, newBid._id);
+
+      return res.send({ data: newBid, ok: true });
     }
   } catch (err) {
     console.log(err);
   }
 });
 
+const changeBidStatus = async (status, diff, bidID) => {
+  setTimeout(async () => {
+    try {
+      let bid = await bidModel.findById(bidID).select("status");
+      if (!bid && (bid.status === "canceled" || bid.status === "expired"))
+        return;
+
+      await bidModel.updateOne({ _id: bidID }, { status });
+    } catch (err) {
+      console.log(err);
+    }
+  }, diff);
+};
+
+const reviveServer = async () => {
+  try {
+    let soonBids = await bidModel
+      .find({})
+      .select("status startDate endDate")
+      .where("status")
+      .equals("soon");
+
+    let activeBids = await bidModel
+      .find({})
+      .select("status endDate")
+      .where("status")
+      .equals("active");
+
+    if (soonBids.length > 0) {
+      soonBids.forEach((bid) => {
+        let now = dayjs();
+        let startDate = dayjs(bid.startDate);
+        let diffStart = startDate.diff(now, "ms");
+
+        let endDate = dayjs(bid.endDate);
+        let diffEnd = endDate.diff(now, "ms");
+
+        changeBidStatus("active", diffStart, bid._id);
+        changeBidStatus("expired", diffEnd, bid._id);
+      });
+    }
+
+    if (activeBids.length > 0) {
+      activeBids.forEach((bid) => {
+        let now = dayjs();
+
+        let endDate = dayjs(bid.endDate);
+        let diffEnd = endDate.diff(now, "ms");
+
+        changeBidStatus("expired", diffEnd, bid._id);
+      });
+    }
+
+    console.log("Server Successfully Restored");
+  } catch (err) {
+    console.log(err);
+  }
+};
+
 //delete bid
-bidRouter.delete("/delete", authValidation, async (req, res) => {
+bidRouter.delete("/delete/:bidID", authValidation, async (req, res) => {
   let user = res.locals.user;
-  let bidID = req.body.bidID;
+  let { bidID } = req.params;
 
   if (!bidID) {
     return res.send({
@@ -66,13 +134,32 @@ bidRouter.delete("/delete", authValidation, async (req, res) => {
   }
 
   try {
-    let response = await bidModel.deleteOne({
-      _id: bidID,
-    });
+    let bid = await bidModel.findById(bidID).select("user status");
 
-    if (response.deletedCount > 0) {
+    if (JSON.stringify(user.id) !== JSON.stringify(bid.user))
       return res.send({
-        message: "Delete bid successfully",
+        message: "Access Denied!",
+        ok: true,
+      });
+
+    if (bid.status === "soon") {
+      await bidModel.deleteOne({
+        _id: bidID,
+      });
+
+      return res.send({
+        message: "Bid Deleted successfully",
+        ok: true,
+      });
+    } else if (bid.status === "active") {
+      await bidModel.updateOne({ _id: bidID }, { status: "canceled" });
+      return res.send({
+        message: "Bid Canceled successfully",
+        ok: true,
+      });
+    } else {
+      return res.send({
+        message: "Bid Already " + bid.status,
         ok: true,
       });
     }
@@ -130,9 +217,7 @@ bidRouter.get("/all", async (req, res) => {
       .populate("item", "name type description images")
       .populate("user", "name email profilePicture");
 
-    let BWS = bidsWithStatus(bids);
-
-    res.send({ data: BWS, ok: true });
+    res.send({ data: bids, ok: true });
   } catch (err) {
     console.log(err);
   }
@@ -148,9 +233,7 @@ bidRouter.get("/sales", authValidation, async (req, res) => {
       .populate("item", "name type description images")
       .populate("user", "name email profilePicture");
 
-    let BWS = bidsWithStatus(bids);
-
-    res.send({ data: BWS, ok: true });
+    res.send({ data: bids, ok: true });
   } catch (err) {
     console.log(err);
   }
@@ -161,22 +244,18 @@ bidRouter.get("/purchases", authValidation, async (req, res) => {
 
   try {
     let bids = await bidModel
-      .find({ "bidsHistory.userID": user.id })
+      .find({ "bidsHistory.user": user.id })
       .populate("item", "name type description images")
       .populate("user", "name email profilePicture");
 
-    let BWS = bidsWithStatus(bids);
-
-    res.send({ data: BWS, ok: true });
+    res.send({ data: bids, ok: true });
   } catch (err) {
     console.log(err);
   }
 });
 
-//get bids by category ## ERRORRRRR
-// Needs to be completed
-bidRouter.get("/:cat", async (req, res) => {
-  const cat = req.params.cat;
+bidRouter.get("/catrgory/:cat", async (req, res) => {
+  const { cat } = req.params;
 
   try {
     let bids = await bidModel
@@ -188,35 +267,16 @@ bidRouter.get("/:cat", async (req, res) => {
       })
       .populate("user", "name email profilePicture");
 
-    let BWS = bidsWithStatus(bids);
+    bids.forEach((bid, index) => {
+      if (bid.item === null) {
+        bids.splice(index, 1);
+      }
+    });
 
-    res.send({ data: BWS, ok: true });
+    res.send({ data: bids, ok: true });
   } catch (err) {
     console.log(err);
   }
 });
 
-const bidsWithStatus = (bids) => {
-  let xBids = [];
-
-  bids.forEach((bid) => {
-    let newBid = {
-      status: calcStatus(bid),
-      item: bid.item,
-      user: bid.user,
-      _id: bid._id,
-      minPrice: bid.minPrice,
-      startDate: bid.startDate,
-      endDate: bid.endDate,
-      bidsHistory: bid.bidsHistory,
-      createdAt: bid.createdAt,
-      updatedAt: bid.updatedAt,
-      __v: bid.__v,
-    };
-    xBids.push(newBid);
-  });
-
-  return xBids;
-};
-
-module.exports = bidRouter;
+module.exports = { bidRouter, reviveServer };

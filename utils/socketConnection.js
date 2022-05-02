@@ -18,7 +18,6 @@ const initSocket = (socket) => {
 
       if (!bid) socket.emit("bidNotFound");
       else {
-        bid.status = calcStatus(await bid);
         socket.emit("bidFound", bid);
       }
     } catch (err) {
@@ -39,8 +38,6 @@ const initSocket = (socket) => {
           "bidError",
           "Price you enter it must be more than current price"
         );
-
-      bid.status = calcStatus(bid);
 
       if (bid.status !== "active")
         return socket.emit("bidError", "Sorry, Bid is not active");
@@ -68,20 +65,6 @@ const initSocket = (socket) => {
   });
 };
 
-const calcStatus = (bid) => {
-  let startDate = dayjs(bid.startDate);
-  let endDate = dayjs(bid.endDate);
-  let now = dayjs();
-
-  let diffBefore = startDate.diff(now);
-  let diffAfter = endDate.diff(now);
-
-  if (diffBefore > 0) return "soon";
-
-  if (diffAfter < 0) return "expired";
-  return "active";
-};
-
 const getHighestBid = (bid) => {
   if (bid.bidsHistory.length < 1) return { user: null, price: bid.minPrice };
 
@@ -100,7 +83,6 @@ const fetchBid = async (bidID, socket) => {
 
     if (!bid) socket.emit("bidNotFound");
     else {
-      bid.status = calcStatus(await bid);
       socket.broadcast.to(bidID).emit("bidFound", bid);
       socket.emit("bidFound", bid);
     }
@@ -109,4 +91,4 @@ const fetchBid = async (bidID, socket) => {
   }
 };
 
-module.exports = { initSocket, calcStatus, getHighestBid };
+module.exports = { initSocket, getHighestBid };

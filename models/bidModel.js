@@ -22,6 +22,10 @@ const bidSchema = new Schema(
       type: Array,
       default: [],
     },
+    status: {
+      type: String,
+      default: "soon",
+    },
   },
   { timestamps: true }
 );
