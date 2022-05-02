@@ -2,7 +2,7 @@ const express = require("express");
 const cors = require("cors");
 const mongoose = require("mongoose");
 const itemRouter = require("./routes/item");
-const bidRouter = require("./routes/bid");
+const { bidRouter, reviveServer } = require("./routes/bid");
 const authRouter = require("./routes/auth");
 const reportRouter = require("./routes/report");
 const adminRouter = require("./routes/admin");
@@ -14,6 +14,7 @@ require("dotenv").config();
 const app = express();
 const http = require("http");
 const httpServer = http.createServer(app);
+reviveServer();
 
 app.use(express.json());
 app.use(cors());
