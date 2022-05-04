@@ -158,10 +158,15 @@ authRouter.patch("/user-role", authValidation, async (req, res) => {
 
 //get user notifications
 authRouter.get("/notifications", authValidation, async (req, res) => {
-  let user = res.locals.user;
+  let { user } = res.locals;
+  let sortBy = req.query.sortBy || "createdAt";
+  let dir = req.query.dir || -1;
 
   try {
-    let userData = await userModel.findById(user.id).select("notifications");
+    let userData = await userModel
+      .findById(user.id)
+      .sort([[sortBy, dir]])
+      .select("notifications");
 
     return res.send({
       data: userData.notifications,
