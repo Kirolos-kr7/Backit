@@ -16,7 +16,7 @@ const http = require("http");
 const httpServer = http.createServer(app);
 reviveServer();
 
-app.use(express.json());
+app.use(express.json({ limit: "5mb" }));
 app.use(cors());
 
 // connect to mongodb & listen for requests

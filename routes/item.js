@@ -2,14 +2,22 @@ const express = require("express");
 const itemModel = require("../models/itemModel"); //import to itemModel
 const bidModel = require("../models/bidModel"); //import to bidModel
 const authValidation = require("../middlewares/authValidation"); //import to validation in middlewares
-const { v4: uuidv4 } = require("uuid"); // build unique id
 const JOI = require("joi"); //use joi to easier form
+const { v1: uuid } = require("uuid");
+
+var ImageKit = require("imagekit");
+
+var imagekit = new ImageKit({
+  publicKey: "public_QyIWVOnkYPjl4YXn3PGe3ymGrt4=",
+  privateKey: "private_7WVBoOozqMA1E+OUmuJFzGi5KJ0=",
+  urlEndpoint: "https://ik.imagekit.io/bidit",
+});
 
 const itemRouter = express.Router();
 
 //identify the requests of every thing
 const itemSchema = JOI.object({
-  name: JOI.string().min(3).max(32).required(),
+  name: JOI.string().min(3).max(64).required(),
   type: JOI.string().min(3).max(32).required(),
   description: JOI.string().min(3).max(256).required(),
   images: JOI.array().allow(null),
@@ -19,12 +27,12 @@ const itemSchema = JOI.object({
 // add item
 itemRouter.post("/add", authValidation, async (req, res) => {
   let user = res.locals.user;
+  let { images } = req.body;
 
   let item = {
     name: req.body.name,
     type: req.body.type,
     description: req.body.description,
-    images: req.body.images,
     uID: user.id,
   };
 
@@ -40,21 +48,40 @@ itemRouter.post("/add", authValidation, async (req, res) => {
   try {
     let newItem = await itemModel.create(item);
 
-    if (newItem)
-      return res.send({
-        message: "Item Added Successfully",
-        data: newItem,
-        ok: true,
+    if (newItem) {
+      images.forEach(async (image, index) => {
+        let uniqueID = uuid();
+
+        let result = await imagekit.upload({
+          file: image,
+          fileName: uniqueID,
+        });
+
+        await itemModel.updateOne(
+          { _id: newItem.id },
+          { $push: { images: result.name } }
+        );
+
+        if (index === images.length - 1) {
+          await itemModel.findById(newItem.id).then((result) => {
+            return res.send({
+              message: "Item Added Successfully",
+              data: result,
+              ok: true,
+            });
+          });
+        }
       });
+    }
   } catch (err) {
     console.log(err);
   }
 });
 
 //delete item
-itemRouter.delete("/delete", authValidation, async (req, res) => {
+itemRouter.delete("/delete/:itemID", authValidation, async (req, res) => {
   let user = res.locals.user;
-  const itemID = req.body.id;
+  const { itemID } = req.params;
 
   if (!itemID) {
     return res.send({
