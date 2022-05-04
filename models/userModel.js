@@ -5,11 +5,11 @@ const Schema = mongoose.Schema; //build schema
 const notificationSchema = new Schema(
   {
     title: {
-      type: String,
+      type: Object,
       required: [true, "Notification Title is Required"],
     },
     message: {
-      type: String,
+      type: Object,
       required: [true, "Notification Content is Required"],
     },
     redirect: {

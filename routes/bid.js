@@ -1,8 +1,10 @@
 const dayjs = require("dayjs");
 const express = require("express");
 const JOI = require("joi"); //use joi to easier form
+const { Types } = require("mongoose");
 const analyticsModel = require("../models/analyticsModel");
 const bidModel = require("../models/bidModel"); //import to bidModel
+const { sendNotification } = require("../utils/notification");
 const spawn = require("child_process").spawn;
 
 const bidRouter = express.Router();
@@ -66,15 +68,76 @@ bidRouter.post("/add", authValidation, async (req, res) => {
 const changeBidStatus = async (status, diff, bidID) => {
   setTimeout(async () => {
     try {
-      let bid = await bidModel.findById(bidID).select("status");
+      let bid = await bidModel.findById(bidID);
       if (!bid && (bid.status === "canceled" || bid.status === "expired"))
         return;
 
       await bidModel.updateOne({ _id: bidID }, { status });
+
+      console.log(status);
+
+      if (status === "expired") {
+        if (bid.bidsHistory.length > 0) {
+          console.log("There is Bids");
+          let highestBid = getHighestBid(bid);
+
+          sendNotification({
+            userID: bid.user,
+            title: {
+              ar: "لقد انتهى المزاد الخاص بك!",
+              en: "Your bid just ended!",
+            },
+            message: {
+              ar: "تفقد نتيجة مزادك",
+              en: "Checkout your bid result",
+            },
+            redirect: `/bid/${bidID}`,
+          });
+
+          sendNotification({
+            userID: highestBid.user,
+            title: {
+              ar: "مبروك. لقد ربحت المزاد",
+              en: "You just won the bid!",
+            },
+            message: {
+              ar: "تفقد نتيجة المزاد الذي ربحته",
+              en: "Checkout the bid you won! ",
+            },
+            redirect: `/bid/${bidID}`,
+          });
+        } else {
+          console.log("No Bids");
+          sendNotification({
+            userID: bid.user,
+            title: {
+              ar: "للأسف. لم ينضم احد الى مزادك.",
+              en: "Oops. no one joined your bid.",
+            },
+            message: {
+              ar: "لقد انتهى المزاد الخاص بك! ولم ينضم له احد.",
+              en: "Your bid just ended and no one joined.",
+            },
+            redirect: `/bid/${bidID}`,
+          });
+        }
+      }
     } catch (err) {
       console.log(err);
     }
   }, diff);
+};
+
+const getHighestBid = (bid) => {
+  let highestBid = { user: null, price: bid.minPrice };
+
+  bid.bidsHistory.forEach((x) => {
+    if (x.price > highestBid.price) {
+      highestBid = x;
+    }
+  });
+
+  return highestBid;
 };
 
 const reviveServer = async () => {
@@ -221,6 +284,37 @@ bidRouter.get("/smilar/:bidID", async (req, res) => {
       return res.send({ message: "No Data Found", ok: false });
     }
   });
+});
+
+bidRouter.get("/recently", authValidation, async (req, res) => {
+  let user = res.locals.user;
+
+  try {
+    let anx = await analyticsModel
+      .find({ bidderID: user.id })
+      .sort([["createdAt", -1]])
+      .limit(4)
+      .select("bidID");
+
+    let recentBids = [];
+
+    anx.forEach((item) => {
+      recentBids.push(Types.ObjectId(item.bidID));
+    });
+
+    let bids = await bidModel
+      .find({
+        _id: {
+          $in: recentBids,
+        },
+      })
+      .populate("item", "name type description images")
+      .populate("user", "name email profilePicture");
+
+    res.send({ data: bids, ok: true });
+  } catch (err) {
+    console.log(err);
+  }
 });
 
 //view all bids

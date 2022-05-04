@@ -61,8 +61,14 @@ authRouter.post("/register", async (req, res) => {
 
       sendNotification({
         userID: thisUser._id,
-        title: "Welcome to Bidit!",
-        message: `Hello ${thisUser.name} We are deligted to have you aboard.`,
+        title: {
+          ar: "مرحباٌ بك في Bidit!",
+          en: "Welcome to Bidit!",
+        },
+        message: {
+          ar: `مرحباٌ بك يا ${thisUser.name} على منصتنا نحن سعداء بوجودك.`,
+          en: `Hello ${thisUser.name} We are deligted to have you aboard.`,
+        },
       });
 
       let token = await createToken(thisUser);
@@ -215,6 +221,9 @@ authRouter.patch(
   async (req, res) => {
     let user = res.locals.user;
     let { ntID } = req.params;
+
+    return;
+
     try {
       let userData = await userModel.findById(user.id);
 

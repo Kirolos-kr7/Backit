@@ -1,11 +1,12 @@
 const bidModel = require("../models/bidModel");
 const dayjs = require("dayjs");
 const { sendNotification } = require("./notification");
+const analyticsModel = require("../models/analyticsModel");
 
 const initSocket = (socket) => {
   console.log("a user connected");
 
-  socket.on("pageLoaded", async (bidID) => {
+  socket.on("pageLoaded", async (bidID, bidderID) => {
     try {
       socket.join(bidID);
 
@@ -20,6 +21,9 @@ const initSocket = (socket) => {
       else {
         socket.emit("bidFound", bid);
       }
+
+      let anx = await analyticsModel.findOne({ bidID, bidderID });
+      if (!anx) await analyticsModel.create({ bidID, bidderID });
     } catch (err) {
       console.log(err);
     }
@@ -53,8 +57,14 @@ const initSocket = (socket) => {
         if (highestBid.user) {
           sendNotification({
             userID: highestBid.user,
-            title: "Someone raised the game!",
-            message: `You've been beaten. Put your new price to stay on top`,
+            title: {
+              ar: "لقد قام احد برفع سعر المزاد!",
+              en: "Someone raised the bid price!",
+            },
+            message: {
+              ar: "لقد تغلب احدهم عليك. ضع سعرك الجديد لتبقى على القمة.",
+              en: "You've been beaten. Put your new price to stay on top.",
+            },
             redirect: `/bid/${bidID}`,
           });
         }
