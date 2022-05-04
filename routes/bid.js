@@ -225,9 +225,15 @@ bidRouter.get("/smilar/:bidID", async (req, res) => {
 
 //view all bids
 bidRouter.get("/all", async (req, res) => {
+  let limit = req.query.limit || 0;
+  let sortBy = req.query.sortBy || "createdAt";
+  let dir = req.query.dir || -1;
+
   try {
     let bids = await bidModel
       .find()
+      .sort([[sortBy, dir]])
+      .limit(limit)
       .populate("item", "name type description images")
       .populate("user", "name email profilePicture");
 
