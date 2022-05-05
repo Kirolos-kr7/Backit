@@ -368,7 +368,7 @@ bidRouter.get("/purchases", authValidation, async (req, res) => {
   }
 });
 
-bidRouter.get("/catrgory/:cat", async (req, res) => {
+bidRouter.get("/category/:cat", async (req, res) => {
   const { cat } = req.params;
 
   try {
