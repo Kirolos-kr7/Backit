@@ -21,9 +21,10 @@ const initSocket = (socket) => {
       else {
         socket.emit("bidFound", bid);
       }
-
-      let anx = await analyticsModel.findOne({ bidID, bidderID });
-      if (!anx) await analyticsModel.create({ bidID, bidderID });
+      if (bidderID) {
+        let anx = await analyticsModel.findOne({ bidID, bidderID });
+        if (!anx) await analyticsModel.create({ bidID, bidderID });
+      }
     } catch (err) {
       console.log(err);
     }
