@@ -6,6 +6,18 @@ const jwt = require("jsonwebtoken"); //connect to jwt
 const authValidation = require("../middlewares/authValidation"); //connect to validation middlware
 const authRouter = express.Router();
 const JOI = require("joi");
+const nodemailer = require("nodemailer");
+
+// Send email (use credintials of SendGrid)
+var transporter = nodemailer.createTransport({
+  host: "smtp.gmail.com",
+  port: 465,
+  secure: true,
+  auth: {
+    user: "bidit.platform@gmail.com",
+    pass: "bixx123456xxib",
+  },
+});
 
 const registerSchema = JOI.object({
   name: JOI.string().min(2).max(32).required(),
@@ -72,12 +84,120 @@ authRouter.post("/register", async (req, res) => {
       });
 
       let token = await createToken(thisUser);
-      return res.send({
-        data: { user: thisUser, token },
-        message: "User Registered Successfully",
-        ok: true,
+      let verifyToken = await createVerifyToken(thisUser);
+
+      let mailOptions = {
+        from: "bidit.platform@gmail.com",
+        to: user.email,
+        subject: "Account Verification",
+        html: `<h1>Hello ${user.name}</h1><br> Please Click on the link to verify your email.<br><a href="https://bidit.netlify.app/en/verify-email/${verifyToken}">Click here to verify</a>`,
+      };
+
+      transporter.sendMail(mailOptions, (err) => {
+        if (err) {
+          return res.send({
+            message: err,
+            ok: false,
+          });
+        } else {
+          return res.send({
+            data: { user: thisUser, token },
+            message: "User Registered Successfully",
+            ok: true,
+          });
+        }
       });
     });
+  } catch (err) {
+    console.log(err);
+  }
+});
+
+authRouter.get(
+  "/resend-verification-link",
+  authValidation,
+  async (req, res) => {
+    let { user } = res.locals;
+
+    try {
+      let verifyToken = await createVerifyToken({
+        _id: user.id,
+        email: user.email,
+      });
+
+      let mailOptions = {
+        from: "bidit.platform@gmail.com",
+        to: user.email,
+        subject: "Account Verification",
+        html: `<h1>Hello Again</h1><br> Please Click on the link to verify your email.<br><a href="https://bidit.netlify.app/en/verify-email/${verifyToken}">Click here to verify</a>`,
+      };
+
+      transporter.sendMail(mailOptions, (err) => {
+        if (err)
+          return res.send({
+            message: err,
+            ok: false,
+          });
+        else
+          return res.send({
+            message: "Verification Link is sent Successfully",
+            ok: true,
+          });
+      });
+    } catch (err) {
+      console.log(err);
+    }
+  }
+);
+
+authRouter.patch("/verify-account/:token", async (req, res) => {
+  let { token } = req.params;
+
+  try {
+    jwt.verify(token, process.env.JWT_SECRECT_KEY, {}, async (err, dec) => {
+      if (err) return res.send({ message: err.message, ok: false });
+
+      if (dec.verify) {
+        let updatedUser = await userModel.updateOne(
+          { _id: dec.id },
+          { isVerified: true }
+        );
+        if (updatedUser.modifiedCount > 0)
+          return res.send({
+            message: "Your Account is Successfully Verified",
+            ok: true,
+          });
+      }
+    });
+  } catch (err) {
+    console.log(err);
+  }
+});
+
+// forgot-password HERE *************************************************
+authRouter.get("forgot-password", async (req, res) => {
+  let { email } = req.body;
+
+  try {
+    // findOne user from db using email
+    // check if a user is found
+    // create a forgot password token
+    // send email to user with forgot token
+  } catch (err) {
+    console.log(err);
+  }
+});
+
+// change-password HERE *************************************************
+authRouter.patch("change-password", async (req, res) => {
+  let { email, password, confirmPassword } = req.body;
+
+  try {
+    // findOne user from db using email
+    // check if a user is found
+    // check if password === confirmPassword
+    // use bcrypt to hash new password
+    // update user with hashed password
   } catch (err) {
     console.log(err);
   }
@@ -248,6 +368,30 @@ const createToken = async (user) => {
     process.env.JWT_SECRECT_KEY,
     {
       expiresIn: "3d",
+    }
+  );
+
+  return token;
+};
+
+const createVerifyToken = async (user) => {
+  let token = jwt.sign(
+    { email: user.email, id: user._id, verify: true },
+    process.env.JWT_SECRECT_KEY,
+    {
+      expiresIn: "2h",
+    }
+  );
+
+  return token;
+};
+
+const createForgotPasswordToken = async (user) => {
+  let token = jwt.sign(
+    { email: user.email, id: user._id, forgotPassword: true },
+    process.env.JWT_SECRECT_KEY,
+    {
+      expiresIn: "2h",
     }
   );
 

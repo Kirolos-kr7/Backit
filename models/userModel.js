@@ -20,11 +20,6 @@ const notificationSchema = new Schema(
       type: Boolean,
       default: false,
     },
-
-    isVerified: {
-      type: Boolean,
-      default: false,
-    },
   },
   { timestamps: true }
 );
@@ -75,6 +70,10 @@ const userSchema = new Schema(
     premium: {
       type: Object,
       default: null,
+    },
+    isVerified: {
+      type: Boolean,
+      default: false,
     },
     notifications: [notificationSchema],
   },
