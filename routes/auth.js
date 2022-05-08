@@ -175,7 +175,7 @@ authRouter.patch("/verify-account/:token", async (req, res) => {
 });
 
 // forgot-password HERE *************************************************
-authRouter.get("forgot-password", async (req, res) => {
+authRouter.get("/forgot-password", async (req, res) => {
   let { email } = req.body;
 
   try {
@@ -183,13 +183,41 @@ authRouter.get("forgot-password", async (req, res) => {
     // check if a user is found
     // create a forgot password token
     // send email to user with forgot token
+
+    let thisUser = await userModel.findOne({ email });
+
+    if (!thisUser) {
+      return res.send({ message: "User does not exist", ok: false });
+    }
+    let token = await createForgotPasswordToken()
+
+    let mailOptions = {
+      from: "bidit.platform@gmail.com",
+      to: email,
+      subject: "Forgot PassWord",
+      html: `<h1>Hello Again</h1><br> Please Click on the link to Reset your Password.<br><a href="https://bidit.netlify.app/en/reset-password/${token}">Click here to Reset Your Password</a>`,
+    };
+
+    transporter.sendMail(mailOptions, (err) => {
+      if (err)
+        return res.send({
+          message: err,
+          ok: false,
+        });
+      else
+        return res.send({
+          message: "Forget Password Link is sent Successfully",
+          ok: true,
+        });
+    })
+
   } catch (err) {
     console.log(err);
   }
 });
 
-// change-password HERE *************************************************
-authRouter.patch("change-password", async (req, res) => {
+// reset-password HERE *************************************************
+authRouter.patch("reset-password", async (req, res) => {
   let { email, password, confirmPassword } = req.body;
 
   try {
@@ -198,6 +226,26 @@ authRouter.patch("change-password", async (req, res) => {
     // check if password === confirmPassword
     // use bcrypt to hash new password
     // update user with hashed password
+    let thisUser = await userModel.findOne({ email });
+
+    if (!thisUser) {
+      return res.send({ message: "User does not exist", ok: false });
+    }
+    if (password !== confirmPassword)
+      return res.send({ message: "Passwords Dosen't Match", ok: false });
+
+    bcrypt.hash(password, 10, async (err, hash) => {
+      if (err) {
+        return res.send({ message: err, ok: false });
+      } else {
+        let updatedUser = await userModel.updateOne({ email }, { password: hash })
+        if (updatedUser.modifiedCount > 0) {
+          return res.send({ message: "password reset succesfully", ok: true });
+        }
+      }
+    });
+
+
   } catch (err) {
     console.log(err);
   }
