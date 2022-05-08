@@ -14,8 +14,8 @@ var transporter = nodemailer.createTransport({
   port: 465,
   secure: true,
   auth: {
-    user: "bidit.platform@gmail.com",
-    pass: "bixx123456xxib",
+    user: process.env.GOOGLE_USER,
+    pass: process.env.GOOGLE_PASS,
   },
 });
 
