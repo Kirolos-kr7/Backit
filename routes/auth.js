@@ -7,15 +7,20 @@ const authValidation = require("../middlewares/authValidation"); //connect to va
 const authRouter = express.Router();
 const JOI = require("joi");
 const nodemailer = require("nodemailer");
+const tokenModel = require("../models/tokenModel");
 
-// Send email (use credintials of SendGrid)
 var transporter = nodemailer.createTransport({
   host: "smtp.gmail.com",
   port: 465,
   secure: true,
+
   auth: {
+    type: "OAuth2",
     user: process.env.GOOGLE_USER,
-    pass: process.env.GOOGLE_PASS,
+    clientId: process.env.CLIENT_ID,
+    clientSecret: process.env.CLIENT_SECRET,
+    refreshToken: process.env.REFRESH_TOKEN,
+    accessToken: process.env.ACCESS_TOKEN,
   },
 });
 
@@ -24,8 +29,8 @@ const registerSchema = JOI.object({
   email: JOI.string()
     .email({ minDomainSegments: 2, tlds: { allow: ["com", "net", "co"] } })
     .required(),
-  password: JOI.string().pattern(new RegExp("^[a-zA-Z0-9]{3,30}$")).required(),
-  confirmPassword: JOI.ref("password"),
+  password: JOI.string().min(7).max(30).required(),
+  confirmPassword: JOI.string().min(7).max(30).required(),
   address: JOI.string().min(2).required(),
   gender: JOI.string().min(4).required(),
   isAdmin: JOI.boolean(),
@@ -39,7 +44,15 @@ const loginSchema = JOI.object({
   email: JOI.string()
     .email({ minDomainSegments: 2, tlds: { allow: ["com", "net", "co"] } })
     .required(),
-  password: JOI.string().pattern(new RegExp("^[a-zA-Z0-9]{3,30}$")).required(),
+  password: JOI.string().min(7).max(30).required(),
+});
+
+const resetPasswordSchema = JOI.object({
+  email: JOI.string()
+    .email({ minDomainSegments: 2, tlds: { allow: ["com", "net", "co"] } })
+    .required(),
+  password: JOI.string().min(7).max(30).required(),
+  confirmPassword: JOI.string().min(7).max(30).required(),
 });
 
 //register
@@ -60,6 +73,9 @@ authRouter.post("/register", async (req, res) => {
     if (isValid.error) {
       return res.send({ message: isValid.error.details[0].message, ok: false });
     }
+
+    if (user.password !== user.confirmPassword)
+      return res.send({ message: "Passwords Dosen't Match", ok: false });
 
     let isRegistered = await userModel.findOne({ email: user.email });
     if (isRegistered)
@@ -84,17 +100,21 @@ authRouter.post("/register", async (req, res) => {
       });
 
       let token = await createToken(thisUser);
-      let verifyToken = await createVerifyToken(thisUser);
+
+      let verifyToken = await tokenModel.create({
+        user: user.id,
+      });
 
       let mailOptions = {
         from: "bidit.platform@gmail.com",
         to: user.email,
         subject: "Account Verification",
-        html: `<h1>Hello ${user.name}</h1><br> Please Click on the link to verify your email.<br><a href="https://bidit.netlify.app/en/verify-email/${verifyToken}">Click here to verify</a>`,
+        html: `<h1>Hello ${user.name}</h1><br> Please Click on the link to verify your email.<br><a href="https://bidit.netlify.app/en/verify-email/${verifyToken._id}">Click here to verify</a>`,
       };
 
       transporter.sendMail(mailOptions, (err) => {
         if (err) {
+          console.log(err);
           return res.send({
             message: err,
             ok: false,
@@ -113,62 +133,64 @@ authRouter.post("/register", async (req, res) => {
   }
 });
 
-authRouter.get(
-  "/resend-verification-link",
-  authValidation,
-  async (req, res) => {
-    let { user } = res.locals;
+authRouter.get("/send-verification-link", authValidation, async (req, res) => {
+  let { user } = res.locals;
 
-    try {
-      let verifyToken = await createVerifyToken({
-        _id: user.id,
-        email: user.email,
-      });
+  try {
+    let existingToken = await tokenModel.findOne({ user: user.id });
 
-      let mailOptions = {
-        from: "bidit.platform@gmail.com",
-        to: user.email,
-        subject: "Account Verification",
-        html: `<h1>Hello Again</h1><br> Please Click on the link to verify your email.<br><a href="https://bidit.netlify.app/en/verify-email/${verifyToken}">Click here to verify</a>`,
-      };
+    if (existingToken)
+      return res.send({ message: "Link Already Sent", ok: false });
 
-      transporter.sendMail(mailOptions, (err) => {
-        if (err)
-          return res.send({
-            message: err,
-            ok: false,
-          });
-        else
-          return res.send({
-            message: "Verification Link is sent Successfully",
-            ok: true,
-          });
-      });
-    } catch (err) {
-      console.log(err);
-    }
+    let token = await tokenModel.create({
+      user: user.id,
+    });
+
+    let mailOptions = {
+      from: "bidit.platform@gmail.com",
+      to: user.email,
+      subject: "Account Verification",
+      html: `
+      <h1>Hello Again</h1>
+      <br>Please Click on the link to verify your email.
+      <br><a href="bidit.netlify.app/en/verify-email/${token._id}">Click here to verify</a>
+      `,
+    };
+
+    transporter.sendMail(mailOptions, (err) => {
+      if (err) {
+        return res.send({
+          message: err,
+          ok: false,
+        });
+      } else
+        return res.send({
+          message: "Verification Link is sent Successfully",
+          ok: true,
+        });
+    });
+  } catch (err) {
+    console.log(err);
   }
-);
+});
 
-authRouter.patch("/verify-account/:token", async (req, res) => {
+authRouter.patch("/verify-email/:token", authValidation, async (req, res) => {
+  let { user } = res.locals;
   let { token } = req.params;
 
   try {
-    jwt.verify(token, process.env.JWT_SECRECT_KEY, {}, async (err, dec) => {
-      if (err) return res.send({ message: err.message, ok: false });
+    let existingToken = await tokenModel.findOne({ _id: token });
 
-      if (dec.verify) {
-        let updatedUser = await userModel.updateOne(
-          { _id: dec.id },
-          { isVerified: true }
-        );
-        if (updatedUser.modifiedCount > 0)
-          return res.send({
-            message: "Your Account is Successfully Verified",
-            ok: true,
-          });
-      }
-    });
+    if (!existingToken)
+      return res.send({ message: "Token Expired.", ok: false });
+
+    let updatedUser = await userModel.updateOne(
+      { _id: user.id },
+      { isVerified: true }
+    );
+
+    if (updatedUser.modifiedCount > 0)
+      return res.send({ message: "Email verified successfully.", ok: true });
   } catch (err) {
     console.log(err);
   }
@@ -176,7 +198,7 @@ authRouter.patch("/verify-account/:token", async (req, res) => {
 
 // forgot-password HERE *************************************************
 authRouter.get("/forgot-password", async (req, res) => {
-  let { email } = req.body;
+  let { email } = req.query;
 
   try {
     // findOne user from db using email
@@ -184,18 +206,33 @@ authRouter.get("/forgot-password", async (req, res) => {
     // create a forgot password token
     // send email to user with forgot token
 
-    let thisUser = await userModel.findOne({ email });
+    if (!email)
+      return res.send({ message: "User Email is Required.", ok: false });
 
+    let existingToken = await tokenModel.findOne({
+      user: email,
+    });
+
+    if (existingToken)
+      return res.send({ message: "Token Already Sent.", ok: false });
+
+    let thisUser = await userModel.findOne({ email });
     if (!thisUser) {
-      return res.send({ message: "User does not exist", ok: false });
+      return res.send({ message: "User does not exist.", ok: false });
     }
-    let token = await createForgotPasswordToken()
+
+    let token = await tokenModel.create({
+      user: email,
+    });
 
     let mailOptions = {
       from: "bidit.platform@gmail.com",
       to: email,
-      subject: "Forgot PassWord",
-      html: `<h1>Hello Again</h1><br> Please Click on the link to Reset your Password.<br><a href="https://bidit.netlify.app/en/reset-password/${token}">Click here to Reset Your Password</a>`,
+      subject: "Forgot Password",
+      html: `
+      <h1>Hello Again</h1>
+      <br> Please Click on the link to Reset your Password.
+      <br><a href="https://bidit.netlify.app/en/reset-password/${token._id}">Click here to Reset Your Password</a>`,
     };
 
     transporter.sendMail(mailOptions, (err) => {
@@ -206,18 +243,34 @@ authRouter.get("/forgot-password", async (req, res) => {
         });
       else
         return res.send({
-          message: "Forget Password Link is sent Successfully",
+          message: "Reset Password Link is sent Successfully",
           ok: true,
         });
-    })
+    });
+  } catch (err) {
+    console.log(err);
+  }
+});
 
+authRouter.get("/validate-password-token", async (req, res) => {
+  let { token } = req.query;
+
+  try {
+    if (token.length !== 24)
+      return res.send({ message: "Invalid Token", ok: false });
+
+    let existingToken = await tokenModel.findOne({ _id: token });
+    if (!existingToken)
+      return res.send({ message: "Invalid Token", ok: false });
+
+    return res.send({ data: { email: existingToken.user }, ok: true });
   } catch (err) {
     console.log(err);
   }
 });
 
 // reset-password HERE *************************************************
-authRouter.patch("reset-password", async (req, res) => {
+authRouter.patch("/reset-password", async (req, res) => {
   let { email, password, confirmPassword } = req.body;
 
   try {
@@ -226,26 +279,43 @@ authRouter.patch("reset-password", async (req, res) => {
     // check if password === confirmPassword
     // use bcrypt to hash new password
     // update user with hashed password
-    let thisUser = await userModel.findOne({ email });
 
-    if (!thisUser) {
-      return res.send({ message: "User does not exist", ok: false });
+    let isValid = resetPasswordSchema.validate({
+      email,
+      password,
+      confirmPassword,
+    });
+
+    if (isValid.error) {
+      return res.send({ message: isValid.error.details[0].message, ok: false });
     }
+
     if (password !== confirmPassword)
       return res.send({ message: "Passwords Dosen't Match", ok: false });
 
+    let thisUser = await userModel.findOne({ email });
+
+    if (!thisUser)
+      return res.send({ message: "User does not exist", ok: false });
+
     bcrypt.hash(password, 10, async (err, hash) => {
-      if (err) {
-        return res.send({ message: err, ok: false });
-      } else {
-        let updatedUser = await userModel.updateOne({ email }, { password: hash })
+      if (err) return res.send({ message: err, ok: false });
+      else {
+        let updatedUser = await userModel.updateOne(
+          { email },
+          { password: hash }
+        );
         if (updatedUser.modifiedCount > 0) {
-          return res.send({ message: "password reset succesfully", ok: true });
+          let updatedToken = await tokenModel.deleteOne({ email });
+          if (updatedToken.deletedCount > 0) {
+            return res.send({
+              message: "password reset succesfully",
+              ok: true,
+            });
+          }
         }
       }
     });
-
-
   } catch (err) {
     console.log(err);
   }
@@ -416,30 +486,6 @@ const createToken = async (user) => {
     process.env.JWT_SECRECT_KEY,
     {
       expiresIn: "3d",
-    }
-  );
-
-  return token;
-};
-
-const createVerifyToken = async (user) => {
-  let token = jwt.sign(
-    { email: user.email, id: user._id, verify: true },
-    process.env.JWT_SECRECT_KEY,
-    {
-      expiresIn: "2h",
-    }
-  );
-
-  return token;
-};
-
-const createForgotPasswordToken = async (user) => {
-  let token = jwt.sign(
-    { email: user.email, id: user._id, forgotPassword: true },
-    process.env.JWT_SECRECT_KEY,
-    {
-      expiresIn: "2h",
     }
   );
 
