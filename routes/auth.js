@@ -8,6 +8,14 @@ const authRouter = express.Router();
 const JOI = require("joi");
 const nodemailer = require("nodemailer");
 const tokenModel = require("../models/tokenModel");
+const { v1: uuid } = require("uuid");
+const ImageKit = require("imagekit");
+
+var imagekit = new ImageKit({
+  publicKey: "public_QyIWVOnkYPjl4YXn3PGe3ymGrt4=",
+  privateKey: "private_7WVBoOozqMA1E+OUmuJFzGi5KJ0=",
+  urlEndpoint: "https://ik.imagekit.io/bidit",
+});
 
 var transporter = nodemailer.createTransport({
   host: "smtp.gmail.com",
@@ -403,14 +411,19 @@ authRouter.patch("/user-role", authValidation, async (req, res) => {
 //get user notifications
 authRouter.get("/notifications", authValidation, async (req, res) => {
   let { user } = res.locals;
-  let sortBy = req.query.sortBy || "createdAt";
-  let dir = req.query.dir || -1;
 
   try {
-    let userData = await userModel
-      .findById(user.id)
-      .sort([[sortBy, dir]])
-      .select("notifications");
+    let userData = await userModel.findById(user.id).select("notifications");
+
+    userData.notifications.sort((a, b) => {
+      const aDate = new Date(a.updatedAt);
+      const bDate = new Date(b.updatedAt);
+
+      if (aDate < bDate) return 1;
+      if (aDate > bDate) return -1;
+
+      return 0;
+    });
 
     return res.send({
       data: userData.notifications,
@@ -491,5 +504,59 @@ const createToken = async (user) => {
 
   return token;
 };
+
+authRouter.post("/add-profile", authValidation, async (req, res) => {
+  let { user } = res.locals;
+  let { image } = req.body;
+
+  if (!image) return res.send({ message: "An image is required", ok: false });
+
+  try {
+    imagekit
+      .upload({
+        file: image,
+        fileName: uuid(),
+      })
+      .then(async (result) => {
+        let thisUser = await userModel.updateOne(
+          { _id: user.id },
+          { profilePicture: { name: result.name, fileId: result.fileId } }
+        );
+
+        if (thisUser.modifiedCount > 0)
+          return res.send({
+            message: "Profile Image Updated Successfully",
+            ok: true,
+          });
+      });
+  } catch (err) {
+    console.log(err);
+  }
+});
+
+authRouter.delete("/delete-profile", authValidation, async (req, res) => {
+  let { user } = res.locals;
+  let { image } = req.body;
+
+  try {
+    imagekit.deleteFile(image.fileId, async (err) => {
+      if (err) return res.send({ message: err, ok: false });
+      else {
+        let thisUser = await userModel.updateOne(
+          { _id: user.id },
+          { profilePicture: null }
+        );
+
+        if (thisUser.modifiedCount > 0)
+          return res.send({
+            message: "Profile Image Removed Successfully",
+            ok: true,
+          });
+      }
+    });
+  } catch (err) {
+    console.log(err);
+  }
+});
 
 module.exports = authRouter;

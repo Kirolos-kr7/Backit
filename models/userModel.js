@@ -58,7 +58,7 @@ const userSchema = new Schema(
       default: false,
     },
     profilePicture: {
-      type: String,
+      type: Object,
       default: null,
     },
     password: {

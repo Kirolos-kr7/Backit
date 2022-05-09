@@ -4,6 +4,7 @@ const JOI = require("joi"); //use joi to easier form
 const { Types } = require("mongoose");
 const analyticsModel = require("../models/analyticsModel");
 const bidModel = require("../models/bidModel"); //import to bidModel
+const itemModel = require("../models/itemModel");
 const { sendNotification } = require("../utils/notification");
 const spawn = require("child_process").spawn;
 
@@ -372,6 +373,7 @@ bidRouter.get("/category/:cat", async (req, res) => {
   const { cat } = req.params;
 
   try {
+    let filteredBids = [];
     let bids = await bidModel
       .find({})
       .populate({
@@ -382,12 +384,61 @@ bidRouter.get("/category/:cat", async (req, res) => {
       .populate("user", "name email profilePicture");
 
     bids.forEach((bid, index) => {
-      if (bid.item === null) {
-        bids.splice(index, 1);
+      if (bid.item !== null) {
+        filteredBids.push(bid);
       }
-    });
 
-    res.send({ data: bids, ok: true });
+      if (index === bids.length - 1)
+        return res.send({ data: filteredBids, ok: true });
+    });
+  } catch (err) {
+    console.log(err);
+  }
+});
+
+bidRouter.get("/search/:s", async (req, res) => {
+  const { s } = req.params;
+
+  try {
+    let filteredBids = [];
+    let bids = await bidModel
+      .find({})
+      .populate({
+        path: "item",
+        match: {
+          $or: [
+            {
+              name: {
+                $regex: s,
+                $options: "i",
+              },
+            },
+            {
+              description: {
+                $regex: s,
+                $options: "i",
+              },
+            },
+            {
+              type: {
+                $regex: s,
+                $options: "i",
+              },
+            },
+          ],
+        },
+        select: "-_id name images",
+      })
+      .select("_id");
+
+    bids.forEach((bid, index) => {
+      if (bid.item !== null) {
+        filteredBids.push(bid);
+      }
+
+      if (index === bids.length - 1)
+        return res.send({ data: filteredBids, ok: true });
+    });
   } catch (err) {
     console.log(err);
   }
