@@ -1,6 +1,4 @@
-const { boolean, required, string } = require("joi");
-const mongoose = require("mongoose"); // connect to db
-const Schema = mongoose.Schema; //build schema
+const { Schema, model } = require("mongoose");
 
 const notificationSchema = new Schema(
   {
@@ -24,7 +22,6 @@ const notificationSchema = new Schema(
   { timestamps: true }
 );
 
-//the form of the schema
 const userSchema = new Schema(
   {
     name: {
@@ -80,5 +77,5 @@ const userSchema = new Schema(
   { timestamps: true }
 );
 
-const userModel = mongoose.model("User", userSchema);
+const userModel = model("User", userSchema);
 module.exports = userModel;

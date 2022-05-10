@@ -96,6 +96,7 @@ authRouter.post("/register", async (req, res) => {
 
     // hash password using bcrypt
     bcrypt.hash(user.password, 10, async (err, hash) => {
+      if (err) return res.send({ message: err, ok: true });
       user.password = hash;
 
       // create new user in db
@@ -121,11 +122,11 @@ authRouter.post("/register", async (req, res) => {
 
       // store a verification token in db
       let verifyToken = await tokenModel.create({
-        user: user.id,
+        user: thisUser.id,
       });
 
       let mailOptions = {
-        from: "bidit.platform@gmail.com",
+        from: process.env.GOOGLE_USER,
         to: user.email,
         subject: "Account Verification",
         html: `<h1>Hello ${user.name}</h1><br> Please Click on the link to verify your email.<br><a href="https://bidit.netlify.app/en/verify-email/${verifyToken._id}">Click here to verify</a>`,
@@ -138,7 +139,7 @@ authRouter.post("/register", async (req, res) => {
           console.log(err);
           return res.send({
             message: err,
-            ok: false,
+            ok: true,
           });
         } else {
           // send user the account info and logging him in using token
