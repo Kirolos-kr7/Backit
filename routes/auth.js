@@ -5,33 +5,22 @@ const bcrypt = require("bcrypt");
 const authValidation = require("../middlewares/authValidation");
 const authRouter = Router();
 const JOI = require("joi");
-const nodemailer = require("nodemailer");
 const { sendNotification } = require("../utils/notification");
 const { v1: uuid } = require("uuid");
 const userModel = require("../models/userModel");
 const tokenModel = require("../models/tokenModel");
 const ImageKit = require("imagekit");
 
+const mailjet = require("node-mailjet").connect(
+  "92ac5ce8ae8ae0ff255cd6f5bb46ce69",
+  "c9b5277b85ef2c4488014502497429c8"
+);
+
 /** INITIALIZATIONS **/
 var imagekit = new ImageKit({
   publicKey: "public_QyIWVOnkYPjl4YXn3PGe3ymGrt4=",
   privateKey: "private_7WVBoOozqMA1E+OUmuJFzGi5KJ0=",
   urlEndpoint: "https://ik.imagekit.io/bidit",
-});
-
-var transporter = nodemailer.createTransport({
-  host: "smtp.gmail.com",
-  port: 465,
-  secure: true,
-
-  auth: {
-    type: "OAuth2",
-    user: process.env.GOOGLE_USER,
-    clientId: process.env.CLIENT_ID,
-    clientSecret: process.env.CLIENT_SECRET,
-    refreshToken: process.env.REFRESH_TOKEN,
-    accessToken: process.env.ACCESS_TOKEN,
-  },
 });
 
 /** VALIDATION SCHEMAS **/
@@ -104,7 +93,6 @@ authRouter.post("/register", async (req, res) => {
       thisUser.password = undefined;
       thisUser.notifications = undefined;
 
-      // send weclome notification
       sendNotification({
         userID: thisUser._id,
         title: {
@@ -125,31 +113,44 @@ authRouter.post("/register", async (req, res) => {
         user: thisUser.id,
       });
 
-      let mailOptions = {
-        from: process.env.GOOGLE_USER,
-        to: user.email,
-        subject: "Account Verification",
-        html: `<h1>Hello ${user.name}</h1><br> Please Click on the link to verify your email.<br><a href="https://bidit.netlify.app/en/verify-email/${verifyToken._id}">Click here to verify</a>`,
-      };
-
       // send mail to user with validation link
-      transporter.sendMail(mailOptions, (err) => {
-        // check if error happened while sending mail
-        if (err) {
-          console.log(err);
-          return res.send({
-            message: err,
-            ok: true,
-          });
-        } else {
-          // send user the account info and logging him in using token
+      let request = mailjet.post("send", { version: "v3.1" }).request({
+        Messages: [
+          {
+            From: {
+              Email: "bidit.platform@gmail.com",
+              Name: "Bidit",
+            },
+            To: [
+              {
+                Email: thisUser.email,
+                Name: thisUser.name,
+              },
+            ],
+            Subject: "Greetings from Bidit.",
+            TextPart: "Welcome to Bidit",
+            HTMLPart: `<h1>Hello ${
+              thisUser.name
+            }</h1><br> Please Click on the link to verify your email.<br><a href="https://bidit.netlify.app/en/verify-email/${await verifyToken._id}">Click here to verify</a>`,
+          },
+        ],
+      });
+
+      request
+        .then(() => {
           return res.send({
             data: { user: thisUser, token },
             message: "User Registered Successfully",
             ok: true,
           });
-        }
-      });
+        })
+        .catch((err) => {
+          console.log(err);
+          return res.send({
+            message: err,
+            ok: false,
+          });
+        });
     });
   } catch (err) {
     console.log(err);
@@ -170,34 +171,48 @@ authRouter.get("/send-verification-link", authValidation, async (req, res) => {
       user: user.id,
     });
 
-    let mailOptions = {
-      from: "bidit.platform@gmail.com",
-      to: user.email,
-      subject: "Account Verification",
-      html: `
-      <h1>Hello Again</h1>
-      <br>Please Click on the link to verify your email.
-      <br><a href="bidit.netlify.app/en/verify-email/${token._id}">Click here to verify</a>
-      `,
-    };
+    let thisUser = await userModel
+      .findOne({ _id: user.id })
+      .select("email name");
 
-    // sending an email with the verification token
-    transporter.sendMail(mailOptions, (err) => {
-      // check if error happened while sending mail
+    let request = mailjet.post("send", { version: "v3.1" }).request({
+      Messages: [
+        {
+          From: {
+            Email: "bidit.platform@gmail.com",
+            Name: "Bidit",
+          },
+          To: [
+            {
+              Email: thisUser.email,
+              Name: thisUser.name,
+            },
+          ],
+          Subject: "Account Verification",
+          TextPart: "Verify Your Account",
+          HTMLPart: `
+          <h1>Hello Again</h1>
+          <br>Please Click on the link to verify your email.
+          <br><a href="bidit.netlify.app/en/verify-email/${token._id}">Click here to verify</a>
+          `,
+        },
+      ],
+    });
 
-      if (err) {
-        return res.send({
-          message: err,
-          ok: false,
-        });
-      }
-      // asserting email is sent successfully
-      else
+    request
+      .then(() => {
         return res.send({
           message: "Verification Link is sent Successfully",
           ok: true,
         });
-    });
+      })
+      .catch((err) => {
+        console.log(err);
+        return res.send({
+          message: err,
+          ok: false,
+        });
+      });
   } catch (err) {
     console.log(err);
   }
@@ -262,29 +277,44 @@ authRouter.get("/forgot-password", async (req, res) => {
       user: email,
     });
 
-    let mailOptions = {
-      from: "bidit.platform@gmail.com",
-      to: email,
-      subject: "Forgot Password",
-      html: `
-      <h1>Hello Again</h1>
-      <br> Please Click on the link to Reset your Password.
-      <br><a href="https://bidit.netlify.app/en/reset-password/${token._id}">Click here to Reset Your Password</a>`,
-    };
+    let request = mailjet.post("send", { version: "v3.1" }).request({
+      Messages: [
+        {
+          From: {
+            Email: "bidit.platform@gmail.com",
+            Name: "Bidit",
+          },
+          To: [
+            {
+              Email: thisUser.email,
+              Name: thisUser.name,
+            },
+          ],
+          Subject: "Forgot Password",
+          TextPart: "Password reset",
+          HTMLPart: `
+          <h1>Hello Again</h1>
+          <br> Please Click on the link to Reset your Password.
+          <br><a href="https://bidit.netlify.app/en/reset-password/${token._id}">Click here to Reset Your Password</a>
+          `,
+        },
+      ],
+    });
 
-    // send recovery email to user
-    transporter.sendMail(mailOptions, (err) => {
-      if (err)
-        return res.send({
-          message: err,
-          ok: false,
-        });
-      else
+    request
+      .then(() => {
         return res.send({
           message: "Reset Password Link is sent Successfully",
           ok: true,
         });
-    });
+      })
+      .catch((err) => {
+        console.log(err);
+        return res.send({
+          message: err,
+          ok: false,
+        });
+      });
   } catch (err) {
     console.log(err);
   }
@@ -477,41 +507,6 @@ authRouter.get("/notifications", authValidation, async (req, res) => {
     console.log(err);
   }
 });
-
-authRouter.post(
-  "/notifications/broadcast",
-  authValidation,
-  async (req, res) => {
-    let user = res.locals.user;
-    let { title, message, redirect } = req.body;
-
-    // checking if a user is admin
-    if (!user.isAdmin) return res.send({ message: "Access Denied", ok: false });
-
-    try {
-      // getting all user
-      let users = await userModel.find();
-
-      // sending notification for each user in db
-      for (let i = 0; i < users.length; i++) {
-        users[i].notifications.push({
-          title,
-          message,
-          redirect,
-        });
-
-        await users[i].save();
-      }
-
-      return res.send({
-        message: "Broadcasted Successfully",
-        ok: true,
-      });
-    } catch (err) {
-      console.log(err);
-    }
-  }
-);
 
 // NOT DONE
 authRouter.patch(
