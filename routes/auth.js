@@ -601,7 +601,6 @@ authRouter.delete("/delete-profile", authValidation, async (req, res) => {
   }
 });
 
-/** FUNCTIONS **/
 const createToken = async (user) => {
   // creating a jwt token to log users in
   let token = jwt.sign(
