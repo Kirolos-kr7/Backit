@@ -202,7 +202,8 @@ authRouter.get("/send-verification-link", authValidation, async (req, res) => {
     request
       .then(() => {
         return res.send({
-          message: "Verification Link is sent Successfully",
+          message:
+            "We've sent you the verification email. Checkout your email and click the link to verify it.",
           ok: true,
         });
       })
@@ -218,8 +219,7 @@ authRouter.get("/send-verification-link", authValidation, async (req, res) => {
   }
 });
 
-authRouter.patch("/verify-email/:token", authValidation, async (req, res) => {
-  let { user } = res.locals;
+authRouter.patch("/verify-email/:token", async (req, res) => {
   let { token } = req.params;
 
   try {
@@ -230,12 +230,15 @@ authRouter.patch("/verify-email/:token", authValidation, async (req, res) => {
 
     // if a token is found then verify the user email
     let updatedUser = await userModel.updateOne(
-      { _id: user.id },
+      { _id: existingToken.user },
       { isVerified: true }
     );
 
-    if (updatedUser.modifiedCount > 0)
-      return res.send({ message: "Email verified successfully.", ok: true });
+    if (updatedUser.modifiedCount > 0) {
+      let removedToken = await tokenModel.deleteOne({ _id: token });
+      if (removedToken.deletedCount > 0)
+        return res.send({ message: "Email verified successfully.", ok: true });
+    }
   } catch (err) {
     console.log(err);
   }
