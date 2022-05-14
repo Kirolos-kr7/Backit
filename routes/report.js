@@ -123,38 +123,15 @@ reportRouter.patch("/feedback", authValidation, async (req, res) => {
     res.send({ message: "Access Denied", ok: false });
   }
 });
-// to let the admin to see all the report's info
-reportRouter.get("/all", authValidation, async (req, res) => {
-  let user = res.locals.user;
-  if (user.isAdmin) {
-    try {
-      let reports = await reportModel.find();
 
-      if (reports) {
-        return res.send({
-          data: reports,
-          ok: true,
-        });
-      } else {
-        return res.send({
-          message: "No report Found",
-          ok: true,
-        });
-      }
-    } catch (err) {
-      console.log(err);
-    }
-  } else {
-    // if not admin
-    res.send({ message: "Access Denied", ok: false });
-  }
-});
 // to let the user to see all his reports
 reportRouter.get("/user", authValidation, async (req, res) => {
   let user = res.locals.user;
 
   try {
-    let reports = await reportModel.find({ reporterID: user.id });
+    let reports = await reportModel
+      .find({ reporterID: user.id })
+      .sort({ createdAt: -1 });
 
     if (reports) {
       return res.send({

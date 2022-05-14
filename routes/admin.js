@@ -2,6 +2,7 @@ const express = require("express");
 const bidModel = require("../models/bidModel");
 const userModel = require("../models/userModel");
 const JOI = require("joi");
+const reportModel = require("../models/reportModel");
 
 const adminRouter = express.Router();
 
@@ -61,7 +62,7 @@ adminRouter.get("/reports", authValidation, async (req, res) => {
     if (!user.isAdmin)
       return res.send({ message: "Access Denied!", ok: false });
 
-    let users = await userModel
+    let users = await reportModel
       .find()
       .sort([[sortBy, dir]])
       .select("_id type status");
