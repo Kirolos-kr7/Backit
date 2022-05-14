@@ -4,16 +4,15 @@ const JOI = require("joi"); //use joi to easier form
 const { Types } = require("mongoose");
 const analyticsModel = require("../models/analyticsModel");
 const bidModel = require("../models/bidModel"); //import to bidModel
-const itemModel = require("../models/itemModel");
 const { sendNotification } = require("../utils/notification");
 const spawn = require("child_process").spawn;
 
 const bidRouter = express.Router();
 
 const bidSchema = JOI.object({
-  startDate: JOI.date().required(),
-  endDate: JOI.date().required(),
-  minPrice: JOI.number().required(),
+  startDate: JOI.date(),
+  endDate: JOI.date(),
+  minPrice: JOI.number().min(1).required(),
   status: JOI.string(),
   bidsHistory: JOI.array().allow(null),
   user: JOI.string().required(),
@@ -31,18 +30,6 @@ bidRouter.post("/add", authValidation, async (req, res) => {
     item: req.body.item,
   };
 
-  let now = dayjs();
-  let startDate = dayjs(bid.startDate);
-  let diffStart = startDate.diff(now, "ms");
-
-  let endDate = dayjs(bid.endDate);
-  let diffEnd = endDate.diff(now, "ms");
-
-  if (diffStart < 0)
-    return res.send({ message: "Invalid Start Date", ok: false });
-
-  if (diffEnd < 0) return res.send({ message: "Invalid End Date", ok: false });
-
   try {
     await bidSchema.validateAsync(bid);
   } catch (err) {
@@ -53,7 +40,34 @@ bidRouter.post("/add", authValidation, async (req, res) => {
   }
 
   try {
+    let now = dayjs();
+    let startDate = dayjs(bid.startDate);
+    let endDate = dayjs(bid.endDate);
+    let diffStartDays = startDate.diff(now, "d");
+    let diffEndDays = endDate.diff(now, "d");
+
+    if (diffStartDays > diffEndDays)
+      return res.send({
+        message: "Start date must be before End date",
+        ok: false,
+      });
+
+    if (diffStartDays > 3 || diffStartDays < 0)
+      return res.send({
+        message: "Start date must be between now and three days from now",
+        ok: false,
+      });
+
+    if (diffEndDays > 21 || diffEndDays < 0)
+      return res.send({
+        message: "End date must be between start date and 21 days from now",
+        ok: false,
+      });
+
     let newBid = await bidModel.create(bid);
+
+    let diffStart = startDate.diff(now, "ms");
+    let diffEnd = endDate.diff(now, "ms");
 
     if (newBid) {
       changeBidStatus("active", diffStart, newBid._id);
