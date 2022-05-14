@@ -27,7 +27,7 @@ var imagekit = new ImageKit({
 const registerSchema = JOI.object({
   name: JOI.string().min(2).max(32).required(),
   email: JOI.string()
-    .email({ minDomainSegments: 3, tlds: { allow: false } })
+    .email({ minDomainSegments: 2, tlds: { allow: false } })
     .required(),
   password: JOI.string().min(7).max(30).required(),
   confirmPassword: JOI.string().min(7).max(30).required(),
@@ -41,14 +41,14 @@ const registerSchema = JOI.object({
 
 const loginSchema = JOI.object({
   email: JOI.string()
-    .email({ minDomainSegments: 3, tlds: { allow: false } })
+    .email({ minDomainSegments: 2, tlds: { allow: false } })
     .required(),
   password: JOI.string().min(7).max(30).required(),
 });
 
 const resetPasswordSchema = JOI.object({
   email: JOI.string()
-    .email({ minDomainSegments: 3, tlds: { allow: false } })
+    .email({ minDomainSegments: 2, tlds: { allow: false } })
     .required(),
   password: JOI.string().min(7).max(30).required(),
   confirmPassword: JOI.string().min(7).max(30).required(),
@@ -251,7 +251,7 @@ authRouter.get("/forgot-password", async (req, res) => {
     // creating an email schema and validating the email
     let emaiSchema = JOI.object({
       email: JOI.string()
-        .email({ minDomainSegments: 3, tlds: { allow: false } })
+        .email({ minDomainSegments: 2, tlds: { allow: false } })
         .required(),
     });
 
