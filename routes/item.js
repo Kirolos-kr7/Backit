@@ -20,7 +20,7 @@ const itemSchema = JOI.object({
   name: JOI.string().min(3).max(64).required(),
   type: JOI.string().min(3).max(32).required(),
   description: JOI.string().min(3).max(256).required(),
-  images: JOI.array().allow(null),
+  images: JOI.array(),
   uID: JOI.string(),
 });
 
@@ -28,6 +28,9 @@ const itemSchema = JOI.object({
 itemRouter.post("/add", authValidation, async (req, res) => {
   let user = res.locals.user;
   let { images } = req.body;
+
+  if (images.length === 0)
+    return res.send({ message: "Atleast one image is required", ok: false });
 
   let item = {
     name: req.body.name,
@@ -91,26 +94,37 @@ itemRouter.delete("/delete/:itemID", authValidation, async (req, res) => {
   }
 
   try {
+    let availableBids = await bidModel.find({ item: itemID }).select("status");
+
+    let isNotSoonBids = availableBids.some((bid) => bid.status !== "soon");
+    if (isNotSoonBids)
+      return res.send({ message: "You Cannot Delete this item", ok: false });
+
+    availableBids.forEach(
+      async (bid) => await bidModel.deleteOne({ _id: bid._id })
+    );
+
     let deletedItem = await itemModel.deleteOne({
       _id: itemID,
     });
 
-    if (deletedItem.deletedCount > 0) {
-      await bidModel.deleteMany({ item: itemID });
-
+    if (deletedItem.deletedCount > 0)
       return res.send({
         message: "Item Deleted successfully",
         ok: true,
       });
-    }
   } catch (err) {
     console.log(err);
   }
 });
 
 // Edit item
-itemRouter.patch("/edit", authValidation, async (req, res) => {
-  let { images, newImages, id: itemID } = req.body;
+itemRouter.patch("/edit/:itemID", authValidation, async (req, res) => {
+  let { itemID } = req.params;
+  let { images, newImages } = req.body;
+
+  if (newImages && images.length === 0)
+    return res.send({ message: "Atleast one image is required", ok: false });
 
   let item = {
     name: req.body.name,
@@ -165,7 +179,6 @@ itemRouter.patch("/edit", authValidation, async (req, res) => {
           });
         });
     } else {
-      if (images.length === 0) item.images = [];
       let response = await itemModel.updateOne({ _id: itemID }, item);
 
       if (response.modifiedCount > 0) {
