@@ -13,6 +13,7 @@ require("dotenv").config();
 
 const app = express();
 const http = require("http");
+const orderRouter = require("./routes/order");
 const httpServer = http.createServer(app);
 reviveServer();
 
@@ -32,6 +33,7 @@ mongoose
 app.use("/auth", authRouter);
 app.use("/item", itemRouter);
 app.use("/bid", bidRouter);
+app.use("/order", orderRouter);
 app.use("/report", reportRouter);
 app.use("/admin", adminRouter);
 

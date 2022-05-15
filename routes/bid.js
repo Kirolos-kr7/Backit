@@ -4,6 +4,7 @@ const JOI = require("joi"); //use joi to easier form
 const { Types } = require("mongoose");
 const analyticsModel = require("../models/analyticsModel");
 const bidModel = require("../models/bidModel"); //import to bidModel
+const orderModel = require("../models/orderModel");
 const { sendNotification } = require("../utils/notification");
 const spawn = require("child_process").spawn;
 
@@ -89,11 +90,8 @@ const changeBidStatus = async (status, diff, bidID) => {
 
       await bidModel.updateOne({ _id: bidID }, { status });
 
-      console.log(status);
-
       if (status === "expired") {
         if (bid.bidsHistory.length > 0) {
-          console.log("There is Bids");
           let highestBid = getHighestBid(bid);
 
           sendNotification({
@@ -109,18 +107,25 @@ const changeBidStatus = async (status, diff, bidID) => {
             redirect: `/bid/${bidID}`,
           });
 
-          sendNotification({
-            userID: highestBid.user,
-            title: {
-              ar: "مبروك. لقد ربحت المزاد",
-              en: "You just won the bid!",
-            },
-            message: {
-              ar: "تفقد نتيجة المزاد الذي ربحته",
-              en: "Checkout the bid you won! ",
-            },
-            redirect: `/bid/${bidID}`,
+          let newOrder = await orderModel.create({
+            bidID,
+            price: highestBid.price,
           });
+
+          if (newOrder) {
+            sendNotification({
+              userID: highestBid.user,
+              title: {
+                ar: "مبروك. لقد ربحت المزاد",
+                en: "You just won the bid!",
+              },
+              message: {
+                ar: "اذهب لتفعيل الطلب الخاص بك",
+                en: "Go activate your order",
+              },
+              redirect: `/orders/${newOrder._id}`,
+            });
+          }
         } else {
           console.log("No Bids");
           sendNotification({
