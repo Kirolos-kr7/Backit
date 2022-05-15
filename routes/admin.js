@@ -3,6 +3,7 @@ const bidModel = require("../models/bidModel");
 const userModel = require("../models/userModel");
 const JOI = require("joi");
 const reportModel = require("../models/reportModel");
+const orderModel = require("../models/orderModel");
 
 const adminRouter = express.Router();
 
@@ -152,26 +153,47 @@ adminRouter.post("/broadcast", authValidation, async (req, res) => {
   }
 });
 
-// adminRouter.get("/orders", authValidation, async (req, res) => {
-//   let user = res.locals.user;
-//   let { sortBy, dir } = req.query;
+adminRouter.get("/orders", authValidation, async (req, res) => {
+  let user = res.locals.user;
+  let { sortBy, dir } = req.query;
 
-//   if (!sortBy) sortBy = "name";
-//   if (!dir) dir = "asc";
+  if (!sortBy) sortBy = "name";
+  if (!dir) dir = "asc";
 
-//   try {
-//     if (!user.isAdmin)
-//       return res.send({ message: "Access Denied!", ok: false });
+  try {
+    if (!user.isAdmin)
+      return res.send({ message: "Access Denied!", ok: false });
 
-//     let users = await userModel
-//       .find()
-//       .sort([[sortBy, dir]])
-//       .select("name email address isAdmin");
+    let orders = await orderModel
+      .find()
+      .sort([[sortBy, dir]])
+      .populate("auctioneer bidder");
 
-//     res.send({ data: users, ok: true });
-//   } catch (err) {
-//     console.log(err);
-//   }
-// });
+    res.send({ data: orders, ok: true });
+  } catch (err) {
+    console.log(err);
+  }
+});
+
+adminRouter.patch("/edit/:orderID", authValidation, async (req, res) => {
+  let { user } = res.locals;
+  let { orderID } = req.params;
+  let { status } = req.body;
+
+  try {
+    if (!user.isAdmin)
+      return res.send({ message: "Access Denied!", ok: false });
+
+    if (!status)
+      return res.send({ message: "New status is required", ok: false });
+
+    let order = await orderModel.updateOne({ _id: orderID }, { status });
+
+    if (order.modifiedCount > 0)
+      return res.send({ message: "Edited Successfully", ok: true });
+  } catch (err) {
+    console.log(err);
+  }
+});
 
 module.exports = adminRouter;

@@ -84,7 +84,7 @@ bidRouter.post("/add", authValidation, async (req, res) => {
 const changeBidStatus = async (status, diff, bidID) => {
   setTimeout(async () => {
     try {
-      let bid = await bidModel.findById(bidID);
+      let bid = await bidModel.findById(bidID).populate("user");
       if (!bid && (bid.status === "canceled" || bid.status === "expired"))
         return;
 
@@ -94,7 +94,7 @@ const changeBidStatus = async (status, diff, bidID) => {
         if (bid.bidsHistory.length > 0) {
           let highestBid = getHighestBid(bid);
 
-          sendNotification({
+          await sendNotification({
             userID: bid.user,
             title: {
               ar: "لقد انتهى المزاد الخاص بك!",
@@ -109,11 +109,17 @@ const changeBidStatus = async (status, diff, bidID) => {
 
           let newOrder = await orderModel.create({
             bidID,
+            auctioneer: bid.user._id,
+            bidder: highestBid.user,
             price: highestBid.price,
+            pickupTime: dayjs().add(2, "d"),
+            pickupAddress: bid.user.address,
           });
 
+          console.log(newOrder);
+
           if (newOrder) {
-            sendNotification({
+            await sendNotification({
               userID: highestBid.user,
               title: {
                 ar: "مبروك. لقد ربحت المزاد",
@@ -127,7 +133,6 @@ const changeBidStatus = async (status, diff, bidID) => {
             });
           }
         } else {
-          console.log("No Bids");
           sendNotification({
             userID: bid.user,
             title: {
@@ -281,7 +286,7 @@ bidRouter.get("/recommended", authValidation, async (req, res) => {
   });
 });
 
-bidRouter.get("/smilar/:bidID", async (req, res) => {
+bidRouter.get("/similar/:bidID", async (req, res) => {
   let { bidID } = req.params;
 
   let analytics = await analyticsModel.find().select({ _id: 0 });

@@ -18,9 +18,9 @@ orderRouter.patch("/activate/:orderID", authValidation, async (req, res) => {
 
   let order = {
     paymentMethod: req.body.paymentMethod,
-    address: req.body.address,
+    arrivalAddress: req.body.address,
     status: "active",
-    arrivalTime: dayjs().add(2, "d"),
+    arrivalTime: dayjs().add(4, "d"),
     shipping: 10,
   };
 
@@ -38,6 +38,20 @@ orderRouter.patch("/activate/:orderID", authValidation, async (req, res) => {
 
     if (thisOrder.modifiedCount > 0)
       return res.send({ message: "Order Activated Successfully", ok: true });
+  } catch (err) {
+    console.log(err);
+  }
+});
+
+orderRouter.get("/user", authValidation, async (req, res) => {
+  let { user } = res.locals;
+
+  try {
+    let order = await orderModel.find({
+      $or: [{ bidder: user.id }, { auctioneer: user.id }],
+    });
+
+    return res.send({ data: order, ok: true });
   } catch (err) {
     console.log(err);
   }
