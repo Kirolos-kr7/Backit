@@ -23,7 +23,8 @@ const initSocket = (socket) => {
       }
       if (bidderID) {
         let anx = await analyticsModel.findOne({ bidID, bidderID });
-        if (!anx) await analyticsModel.create({ bidID, bidderID });
+        if (anx) await analyticsModel.deleteOne({ bidID, bidderID });
+        await analyticsModel.create({ bidID, bidderID });
       }
     } catch (err) {
       console.log(err);

@@ -302,7 +302,7 @@ bidRouter.get("/smilar/:bidID", async (req, res) => {
 });
 
 bidRouter.get("/recently", authValidation, async (req, res) => {
-  let user = res.locals.user;
+  let { user } = res.locals;
 
   try {
     let anx = await analyticsModel
@@ -323,8 +323,7 @@ bidRouter.get("/recently", authValidation, async (req, res) => {
           $in: recentBids,
         },
       })
-      .populate("item", "name type description images")
-      .populate("user", "name email profilePicture");
+      .populate("item", "name type images");
 
     res.send({ data: bids, ok: true });
   } catch (err) {

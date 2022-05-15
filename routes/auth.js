@@ -487,25 +487,40 @@ authRouter.get("/notifications", authValidation, async (req, res) => {
   let { user } = res.locals;
 
   try {
-    // getting user notifications
-    let userData = await userModel.findById(user.id).select("notifications");
+    userModel
+      .findOne({ _id: user.id })
+      .then((doc) => {
+        doc.notifications.forEach((nt) => {
+          nt.seen = true;
+        });
+        doc.save();
+      })
 
-    // sorting user notification from newer to older
-    userData.notifications.sort((a, b) => {
-      const aDate = new Date(a.updatedAt);
-      const bDate = new Date(b.updatedAt);
+      .then(async () => {
+        let userData = await userModel
+          .findById(user.id)
+          .select("notifications");
 
-      if (aDate < bDate) return 1;
-      if (aDate > bDate) return -1;
+        userData.notifications.sort((a, b) => {
+          const aDate = new Date(a.createdAt);
+          const bDate = new Date(b.createdAt);
 
-      return 0;
-    });
+          if (aDate < bDate) return 1;
+          if (aDate > bDate) return -1;
 
-    // sending sorted notifications
-    return res.send({
-      data: userData.notifications,
-      ok: true,
-    });
+          return 0;
+        });
+
+        // sending sorted notifications
+        return res.send({
+          data: userData.notifications,
+          ok: true,
+        });
+      })
+
+      .catch((err) => {
+        console.log("Oh! Dark");
+      });
   } catch (err) {
     console.log(err);
   }

@@ -110,13 +110,12 @@ itemRouter.delete("/delete/:itemID", authValidation, async (req, res) => {
 
 // Edit item
 itemRouter.patch("/edit", authValidation, async (req, res) => {
-  let itemID = req.body.itemID;
+  let { images, newImages, id: itemID } = req.body;
 
   let item = {
     name: req.body.name,
     type: req.body.type,
     description: req.body.description,
-    images: req.body.images,
   };
 
   try {
@@ -129,17 +128,56 @@ itemRouter.patch("/edit", authValidation, async (req, res) => {
   }
 
   try {
-    let response = await itemModel.updateOne({ _id: itemID }, item);
+    if (newImages && images.length > 0) {
+      await itemModel
+        .updateOne(
+          { _id: itemID },
+          {
+            name: item.name,
+            type: item.type,
+            description: item.description,
+            images: [],
+          }
+        )
+        .then(() => {
+          images.forEach(async (image, index) => {
+            let uniqueID = uuid();
 
-    if (response.modifiedCount > 0) {
-      let editedItem = await itemModel.findById(itemID);
+            let result = await imagekit.upload({
+              file: image,
+              fileName: uniqueID,
+            });
 
-      if (editedItem)
-        return res.send({
-          message: "Item Edited Successfully",
-          data: editedItem,
-          ok: true,
+            await itemModel.updateOne(
+              { _id: itemID },
+              { $push: { images: result.name } }
+            );
+
+            if (index === images.length - 1) {
+              await itemModel.findById(itemID).then((result) => {
+                return res.send({
+                  message: "Item Edited Successfully",
+                  data: result,
+                  ok: true,
+                });
+              });
+            }
+          });
         });
+    } else {
+      if (images.length === 0) item.images = [];
+      let response = await itemModel.updateOne({ _id: itemID }, item);
+
+      if (response.modifiedCount > 0) {
+        let editedItem = await itemModel.findById(itemID);
+
+        if (editedItem)
+          return res.send({
+            message: "Item Edited Successfully",
+            data: editedItem,
+            ok: true,
+          });
+      }
     }
   } catch (err) {
     console.log(err);
@@ -150,7 +188,9 @@ itemRouter.get("/all", authValidation, async (req, res) => {
   let user = res.locals.user;
 
   try {
-    let allItems = await itemModel.find({ uID: user.id });
+    let allItems = await itemModel
+      .find({ uID: user.id })
+      .sort({ crearedAt: -1 });
 
     res.send({ data: allItems, ok: true });
   } catch (err) {
