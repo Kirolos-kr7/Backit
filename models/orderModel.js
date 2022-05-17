@@ -2,7 +2,7 @@ const { Schema, model, Types } = require("mongoose");
 
 const orderSchema = new Schema(
   {
-    bidID: { type: Types.ObjectId, ref: "Bid", required: true },
+    bid: { type: Types.ObjectId, ref: "Bid", required: true },
     bidder: { type: Types.ObjectId, ref: "User", required: true },
     auctioneer: { type: Types.ObjectId, ref: "User", required: true },
     status: {
@@ -12,7 +12,7 @@ const orderSchema = new Schema(
     },
     paymentMethod: {
       type: String,
-      default: "NF",
+      default: "",
       lowercase: true,
     },
     price: {

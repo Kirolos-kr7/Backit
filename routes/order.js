@@ -3,14 +3,15 @@ const authValidation = require("../middlewares/authValidation"); //import to val
 const JOI = require("joi"); //use joi to easier form
 const dayjs = require("dayjs");
 const orderModel = require("../models/orderModel");
+const userModel = require("../models/userModel");
 
 const orderRouter = express.Router();
 const orderSchema = JOI.object({
   status: JOI.string().required(),
   paymentMethod: JOI.string().required(),
   arrivalTime: JOI.date().required(),
+  arrivalAddress: JOI.string().required(),
   shipping: JOI.number().required(),
-  address: JOI.string().required(),
 });
 
 orderRouter.patch("/activate/:orderID", authValidation, async (req, res) => {
@@ -18,9 +19,9 @@ orderRouter.patch("/activate/:orderID", authValidation, async (req, res) => {
 
   let order = {
     paymentMethod: req.body.paymentMethod,
-    arrivalAddress: req.body.address,
+    arrivalAddress: req.body.arrivalAddress,
+    arrivalTime: dayjs().add(4, "d").$d,
     status: "active",
-    arrivalTime: dayjs().add(4, "d"),
     shipping: 10,
   };
 
@@ -47,11 +48,53 @@ orderRouter.get("/user", authValidation, async (req, res) => {
   let { user } = res.locals;
 
   try {
-    let order = await orderModel.find({
-      $or: [{ bidder: user.id }, { auctioneer: user.id }],
-    });
+    let orders = await orderModel
+      .find({
+        $or: [{ bidder: user.id }, { auctioneer: user.id }],
+      })
+      .populate({
+        path: "bid",
+        model: "Bid",
+        select: "item",
+        populate: {
+          path: "item",
+          model: "Item",
+          select: "-createdAt -updatedAt -uID -__V",
+        },
+      });
 
-    return res.send({ data: order, ok: true });
+    return res.send({ data: orders, ok: true });
+  } catch (err) {
+    console.log(err);
+  }
+});
+
+orderRouter.get("/:orderID", authValidation, async (req, res) => {
+  let { user } = res.locals;
+  let { orderID } = req.params;
+
+  if (orderID.length !== 24)
+    return res.send({ message: "Incorrect order id", ok: false });
+
+  try {
+    let order = await orderModel
+      .findOne({
+        _id: orderID,
+        $or: [{ bidder: user.id }, { auctioneer: user.id }],
+      })
+      .populate({
+        path: "bid",
+        model: "Bid",
+        select: "item",
+        populate: {
+          path: "item",
+          model: "Item",
+          select: "-createdAt -updatedAt -uID -__V",
+        },
+      });
+
+    if (order) return res.send({ data: order, ok: true });
+    return res.send({ message: "No order with this id", ok: false });
   } catch (err) {
     console.log(err);
   }
