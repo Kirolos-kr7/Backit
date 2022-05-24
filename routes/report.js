@@ -9,22 +9,22 @@ const reportRouter = express.Router();
 
 //identify the requests of every thing
 const reportSchema = JOI.object({
-  reporterID: JOI.string(),
+  reporter: JOI.string(),
   type: JOI.string().min(3).max(32).required(),
   description: JOI.string().min(3).required(),
-  recipientID: JOI.string(),
+  recipient: JOI.string(),
   status: JOI.string(),
 });
 
 // add report
 reportRouter.post("/add", authValidation, async (req, res) => {
-  let user = res.locals.user;
+  let { user } = res.locals;
 
   let report = {
-    reporterID: user.id,
+    reporter: user.id,
     type: req.body.type,
     description: req.body.description,
-    recipientID: req.body.recipientID,
+    recipient: req.body.recipient,
   };
 
   try {
@@ -82,14 +82,15 @@ reportRouter.delete("/delete", authValidation, async (req, res) => {
   }
 });
 
-reportRouter.patch("/feedback", authValidation, async (req, res) => {
+reportRouter.patch("/feedback/:reportID", authValidation, async (req, res) => {
   let user = res.locals.user;
-  const reportID = req.body.reportID;
-  const status = req.body.status;
+  const { reportID } = req.params;
+  const { status } = req.body;
+
   if (user.isAdmin) {
     if (!reportID) {
       return res.send({
-        message: "report Id Is Required",
+        message: "ReportID is Required",
         ok: false,
       });
     }
@@ -130,7 +131,7 @@ reportRouter.get("/user", authValidation, async (req, res) => {
 
   try {
     let reports = await reportModel
-      .find({ reporterID: user.id })
+      .find({ reporter: user.id })
       .sort({ createdAt: -1 });
 
     if (reports) {

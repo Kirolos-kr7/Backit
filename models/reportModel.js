@@ -1,31 +1,27 @@
-const mongoose = require('mongoose');// connect to db
-const Schema = mongoose.Schema; //build schema
+const { Schema, Types, model } = require("mongoose"); // connect to db
 
 //the form of the schema
-const reportSchema = new Schema({
-    reporterID: { // report maker
-        type: String,
-        // required: true
-    },
-    recipientID: { // report on
-        type: String,
-        // required: true
-    },
+const reportSchema = new Schema(
+  {
+    reporter: { type: Types.ObjectId, ref: "User", required: true },
+    recipient: { type: Types.ObjectId, ref: "User", required: true },
     type: {
-        type: String,
-        required: true
+      type: String,
+      required: true,
     },
     description: {
-        type: String,
-        required: true
+      type: String,
+      required: true,
     },
     status: {
-        type: String,
-        required: true,
-        default: "pending",
-        lowercase: true,
-    }
-}, { timestamps: true });
+      type: String,
+      required: true,
+      default: "pending",
+      lowercase: true,
+    },
+  },
+  { timestamps: true }
+);
 
-const reportModel = mongoose.model('Report', reportSchema);
+const reportModel = model("Report", reportSchema);
 module.exports = reportModel;

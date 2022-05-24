@@ -73,6 +73,23 @@ adminRouter.get("/bids", authValidation, async (req, res) => {
   }
 });
 
+adminRouter.delete("/bid/:bidID", authValidation, async (req, res) => {
+  let { user } = res.locals;
+  let { bidID } = req.params;
+
+  try {
+    if (!user.isAdmin)
+      return res.send({ message: "Access Denied!", ok: false });
+
+    let deletedBid = await bidModel.deleteOne({ _id: bidID });
+    if (deletedBid.deletedCount > 0) {
+      res.send({ message: "Bid Removed Successfully", ok: true });
+    } else res.send({ message: "Bid Removal Failed", ok: false });
+  } catch (err) {
+    console.log(err);
+  }
+});
+
 adminRouter.get("/reports", authValidation, async (req, res) => {
   let user = res.locals.user;
   let { sortBy, dir } = req.query;
@@ -87,7 +104,7 @@ adminRouter.get("/reports", authValidation, async (req, res) => {
     let users = await reportModel
       .find()
       .sort([[sortBy, dir]])
-      .select("_id type status");
+      .populate("reporter recipient");
 
     res.send({ data: users, ok: true });
   } catch (err) {
@@ -188,9 +205,36 @@ adminRouter.get("/orders", authValidation, async (req, res) => {
     let orders = await orderModel
       .find()
       .sort([[sortBy, dir]])
-      .populate("auctioneer bidder");
+      .populate("bidder auctioneer")
+      .populate({
+        path: "bid",
+        model: "Bid",
+        select: "item",
+        populate: {
+          path: "item",
+          model: "Item",
+          select: "-createdAt -updatedAt -uID -__V",
+        },
+      });
 
     res.send({ data: orders, ok: true });
+  } catch (err) {
+    console.log(err);
+  }
+});
+
+adminRouter.delete("/order/:orderID", authValidation, async (req, res) => {
+  let { user } = res.locals;
+  let { orderID } = req.params;
+
+  try {
+    if (!user.isAdmin)
+      return res.send({ message: "Access Denied!", ok: false });
+
+    let deletedOrder = await orderModel.deleteOne({ _id: orderID });
+    if (deletedOrder.deletedCount > 0) {
+      res.send({ message: "Order Removed Successfully", ok: true });
+    } else res.send({ message: "Order Removal Failed", ok: false });
   } catch (err) {
     console.log(err);
   }
