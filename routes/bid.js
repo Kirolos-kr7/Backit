@@ -344,7 +344,7 @@ bidRouter.get("/recently", authValidation, async (req, res) => {
 //view all bids
 bidRouter.get("/all", async (req, res) => {
   let limit = req.query.limit || 0;
-  let sortBy = req.query.sortBy || "createdAt";
+  let sortBy = req.query.sortBy || "endDate";
   let dir = req.query.dir || -1;
 
   try {
