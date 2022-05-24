@@ -18,10 +18,7 @@ adminRouter.get("/users", authValidation, async (req, res) => {
     if (!user.isAdmin)
       return res.send({ message: "Access Denied!", ok: false });
 
-    let users = await userModel
-      .find()
-      .sort([[sortBy, dir]])
-      .select("name email isAdmin");
+    let users = await userModel.find().sort([[sortBy, dir]]);
 
     res.send({ data: users, ok: true });
   } catch (err) {
