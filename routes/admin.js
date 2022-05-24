@@ -196,4 +196,32 @@ adminRouter.patch("/edit/:orderID", authValidation, async (req, res) => {
   }
 });
 
+adminRouter.get("/counts", authValidation, async (req, res) => {
+  let { user } = res.locals;
+
+  if (!user.isAdmin) return res.send({ message: "Access Denied!", ok: false });
+
+  Promise.all([
+    userModel.count(),
+    bidModel.count(),
+    orderModel.count(),
+    reportModel.count(),
+  ])
+    .then(([users, bids, orders, reports]) => {
+      return res.send({
+        data: {
+          userCount: users,
+          bidCount: bids,
+          orderCount: orders,
+          reportCount: reports,
+        },
+        ok: true,
+      });
+    })
+    .catch((err) => {
+      console.log(err);
+      return res.send({ message: err, ok: false });
+    });
+});
+
 module.exports = adminRouter;
