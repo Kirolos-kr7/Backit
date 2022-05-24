@@ -34,9 +34,14 @@ const registerSchema = JOI.object({
   address: JOI.string().min(2).required(),
   gender: JOI.string().min(4).required(),
   isAdmin: JOI.boolean(),
-  phone: JOI.string().min(6).required(),
+  phone: JOI.string().min(11).max(11).required(),
   profilePicture: JOI.string().allow(null, ""),
-  premium: JOI.object().allow(null, {}),
+});
+
+const editAccount = JOI.object({
+  name: JOI.string().min(2).max(32).required(),
+  address: JOI.string().min(2).required(),
+  phone: JOI.string().min(11).max(11).required(),
 });
 
 const loginSchema = JOI.object({
@@ -438,8 +443,38 @@ authRouter.post("/login", async (req, res) => {
   }
 });
 
+authRouter.patch("/edit-account", authValidation, async (req, res) => {
+  let { user } = res.locals;
+
+  let userData = {
+    name: req.body.name,
+    phone: req.body.phone,
+    address: req.body.address,
+  };
+
+  try {
+    let isValid = editAccount.validate(userData);
+    if (isValid.error) {
+      return res.send({ message: isValid.error.details[0].message, ok: false });
+    }
+
+    let updatedUser = await userModel.updateOne({ _id: user.id }, userData);
+    if (updatedUser.modifiedCount > 0) {
+      let xUser = await userModel.findOne({ _id: user.id }).select("-password");
+      return res.send({
+        data: xUser,
+        message: "Profile Updated Successfully",
+        ok: true,
+      });
+    }
+    res.send({ message: "Profile Update Failed", ok: false });
+  } catch (err) {
+    console.log(err);
+  }
+});
+
 authRouter.get("/user", authValidation, async (req, res) => {
-  let user = res.locals.user;
+  let { user } = res.locals;
 
   try {
     // getting user data

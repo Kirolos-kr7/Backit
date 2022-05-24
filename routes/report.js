@@ -127,12 +127,12 @@ reportRouter.patch("/feedback/:reportID", authValidation, async (req, res) => {
 
 // to let the user to see all his reports
 reportRouter.get("/user", authValidation, async (req, res) => {
-  let user = res.locals.user;
+  let { user } = res.locals;
 
   try {
-    let reports = await reportModel
-      .find({ reporter: user.id })
-      .sort({ createdAt: -1 });
+    let reports = await reportModel.find({
+      reporter: user.id,
+    });
 
     if (reports) {
       return res.send({
