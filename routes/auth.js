@@ -526,33 +526,6 @@ authRouter.get("/notifications", authValidation, async (req, res) => {
   }
 });
 
-// NOT DONE
-authRouter.patch(
-  "/notifications/seen/:ntID",
-  authValidation,
-  async (req, res) => {
-    let user = res.locals.user;
-    let { ntID } = req.params;
-
-    return;
-
-    try {
-      let userData = await userModel.findById(user.id);
-
-      userData.notifications.id(ntID).seen = true;
-      userData.markModified("notifications");
-      await userData.save();
-
-      return res.send({
-        message: "Notification Seen Successfully",
-        ok: true,
-      });
-    } catch (err) {
-      console.log(err);
-    }
-  }
-);
-
 authRouter.post("/add-profile", authValidation, async (req, res) => {
   let { user } = res.locals;
   let { image } = req.body;

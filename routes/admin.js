@@ -18,13 +18,37 @@ adminRouter.get("/users", authValidation, async (req, res) => {
     if (!user.isAdmin)
       return res.send({ message: "Access Denied!", ok: false });
 
-    let users = await userModel.find().sort([[sortBy, dir]]);
+    let users = await userModel
+      .find()
+      .sort([[sortBy, dir]])
+      .select("name email isAdmin gender phone address createdAt");
 
     res.send({ data: users, ok: true });
   } catch (err) {
     console.log(err);
   }
 });
+
+adminRouter.delete(
+  "/user-account/:userID",
+  authValidation,
+  async (req, res) => {
+    let { user } = res.locals;
+    let { userID } = req.params;
+
+    try {
+      if (!user.isAdmin)
+        return res.send({ message: "Access Denied!", ok: false });
+
+      let deletedUser = await userModel.deleteOne({ _id: userID });
+      if (deletedUser.deletedCount > 0) {
+        res.send({ message: "User Removed Successfully", ok: true });
+      } else res.send({ message: "User Removal Failed", ok: false });
+    } catch (err) {
+      console.log(err);
+    }
+  }
+);
 
 adminRouter.get("/bids", authValidation, async (req, res) => {
   let user = res.locals.user;
