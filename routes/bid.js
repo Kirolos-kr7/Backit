@@ -346,18 +346,22 @@ bidRouter.get("/recently", authValidation, async (req, res) => {
 //view all bids
 bidRouter.get("/all", async (req, res) => {
   let limit = req.query.limit || 0;
+  let skip = req.query.skip || 0;
   let sortBy = req.query.sortBy || "endDate";
   let dir = req.query.dir || -1;
 
   try {
+    let count = await bidModel.count();
+
     let bids = await bidModel
       .find()
       .sort([[sortBy, dir]])
+      .skip(skip)
       .limit(limit)
       .populate("item", "name type description images")
       .populate("user", "name email profilePicture");
 
-    res.send({ data: bids, ok: true });
+    res.send({ data: { count, bids }, ok: true });
   } catch (err) {
     console.log(err);
   }
