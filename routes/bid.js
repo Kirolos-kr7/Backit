@@ -303,7 +303,9 @@ bidRouter.get("/similar/:bidID", async (req, res) => {
 
     if (result != "N/F") {
       let bidIds = result.split(" ");
-      let similarBids = await bidModel.find({ _id: { $in: bidIds } });
+      let similarBids = await bidModel
+        .find({ _id: { $in: bidIds } })
+        .populate("item");
       return res.send({ data: similarBids, ok: true });
     } else {
       return res.send({ message: "No Data Found", ok: false });
