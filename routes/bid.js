@@ -375,14 +375,20 @@ bidRouter.get("/all", async (req, res) => {
 //view all bids for special user
 bidRouter.get("/sales", authValidation, async (req, res) => {
   let user = res.locals.user;
+  let limit = req.query.limit || 0;
+  let skip = req.query.skip || 0;
 
   try {
+    let count = await bidModel.count({ user: user.id });
+
     let bids = await bidModel
       .find({ user: user.id })
+      .limit(limit)
+      .skip(skip)
       .populate("item", "name type description images")
       .populate("user", "name email profilePicture");
 
-    res.send({ data: bids, ok: true });
+    res.send({ data: { bids, count }, ok: true });
   } catch (err) {
     console.log(err);
   }
@@ -390,14 +396,20 @@ bidRouter.get("/sales", authValidation, async (req, res) => {
 
 bidRouter.get("/purchases", authValidation, async (req, res) => {
   let user = res.locals.user;
+  let limit = req.query.limit || 0;
+  let skip = req.query.skip || 0;
 
   try {
+    let count = await bidModel.count({ "bidsHistory.user": user.id });
+
     let bids = await bidModel
       .find({ "bidsHistory.user": user.id })
+      .limit(limit)
+      .skip(skip)
       .populate("item", "name type description images")
       .populate("user", "name email profilePicture");
 
-    res.send({ data: bids, ok: true });
+    res.send({ data: { bids, count }, ok: true });
   } catch (err) {
     console.log(err);
   }
