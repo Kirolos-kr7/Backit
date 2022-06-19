@@ -130,15 +130,24 @@ reportRouter.patch("/feedback/:reportID", authValidation, async (req, res) => {
 // to let the user to see all his reports
 reportRouter.get("/user", authValidation, async (req, res) => {
   let { user } = res.locals;
+  let limit = req.query.limit || 0;
+  let skip = req.query.skip || 0;
 
   try {
-    let reports = await reportModel.find({
+    let count = await reportModel.count({
       reporter: user.id,
     });
 
+    let reports = await reportModel
+      .find({
+        reporter: user.id,
+      })
+      .limit(limit)
+      .skip(skip);
+
     if (reports) {
       return res.send({
-        data: reports,
+        data: { reports, count },
         ok: true,
       });
     } else {
