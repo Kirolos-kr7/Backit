@@ -10,6 +10,8 @@ const adminRouter = express.Router();
 adminRouter.get("/users", authValidation, async (req, res) => {
   let user = res.locals.user;
   let { sortBy, dir } = req.query;
+  let limit = req.query.limit || 0;
+  let skip = req.query.skip || 0;
 
   if (!sortBy) sortBy = "name";
   if (!dir) dir = "asc";
@@ -18,12 +20,16 @@ adminRouter.get("/users", authValidation, async (req, res) => {
     if (!user.isAdmin)
       return res.send({ message: "Access Denied!", ok: false });
 
+    let count = await userModel.count();
+
     let users = await userModel
       .find()
       .sort([[sortBy, dir]])
+      .limit(limit)
+      .skip(skip)
       .select("name email isAdmin gender phone address createdAt");
 
-    res.send({ data: users, ok: true });
+    res.send({ data: { users, count }, ok: true });
   } catch (err) {
     console.log(err);
   }
@@ -53,6 +59,8 @@ adminRouter.delete(
 adminRouter.get("/bids", authValidation, async (req, res) => {
   let user = res.locals.user;
   let { sortBy, dir } = req.query;
+  let limit = req.query.limit || 0;
+  let skip = req.query.skip || 0;
 
   if (!sortBy) sortBy = "name";
   if (!dir) dir = "asc";
@@ -61,13 +69,17 @@ adminRouter.get("/bids", authValidation, async (req, res) => {
     if (!user.isAdmin)
       return res.send({ message: "Access Denied!", ok: false });
 
+    let count = await bidModel.count();
+
     let bids = await bidModel
       .find()
       .sort([[sortBy, dir]])
+      .limit(limit)
+      .skip(skip)
       .populate("item", "name type description images")
       .populate("user", "name email profilePicture");
 
-    res.send({ data: bids, ok: true });
+    res.send({ data: { bids, count }, ok: true });
   } catch (err) {
     console.log(err);
   }
@@ -93,6 +105,8 @@ adminRouter.delete("/bid/:bidID", authValidation, async (req, res) => {
 adminRouter.get("/reports", authValidation, async (req, res) => {
   let user = res.locals.user;
   let { sortBy, dir } = req.query;
+  let limit = req.query.limit || 0;
+  let skip = req.query.skip || 0;
 
   if (!sortBy) sortBy = "name";
   if (!dir) dir = "asc";
@@ -101,12 +115,16 @@ adminRouter.get("/reports", authValidation, async (req, res) => {
     if (!user.isAdmin)
       return res.send({ message: "Access Denied!", ok: false });
 
-    let users = await reportModel
+    let count = await reportModel.count();
+
+    let reports = await reportModel
       .find()
+      .limit(limit)
+      .skip(skip)
       .sort([[sortBy, dir]])
       .populate("reporter recipient");
 
-    res.send({ data: users, ok: true });
+    res.send({ data: { reports, count }, ok: true });
   } catch (err) {
     console.log(err);
   }
@@ -114,18 +132,22 @@ adminRouter.get("/reports", authValidation, async (req, res) => {
 
 adminRouter.get("/notifications", authValidation, async (req, res) => {
   let user = res.locals.user;
+  let limit = req.query.limit || 0;
+  let skip = req.query.skip || 0;
 
   // checking if a user is admin
   if (!user.isAdmin) return res.send({ message: "Access Denied", ok: false });
 
   try {
     // get main user
-    let user = await userModel
+    let { notifications } = await userModel
       .findOne({ email: "bidit.platform@gmail.com" })
       .select("notifications");
 
+    let count = notifications.length;
+
     // sorting user notification from newer to older
-    user.notifications.sort((a, b) => {
+    notifications.sort((a, b) => {
       const aDate = new Date(a.updatedAt);
       const bDate = new Date(b.updatedAt);
 
@@ -135,9 +157,17 @@ adminRouter.get("/notifications", authValidation, async (req, res) => {
       return 0;
     });
 
+    let paginatedNotifications = notifications.slice(
+      skip,
+      parseInt(limit) + parseInt(skip)
+    );
+
     // sending sorted notifications
     return res.send({
-      data: user.notifications,
+      data: {
+        notifications: paginatedNotifications,
+        count,
+      },
       ok: true,
     });
   } catch (err) {
@@ -154,6 +184,7 @@ let ntSchema = JOI.object({
     en: JOI.string().required(),
     ar: JOI.string().required(),
   }),
+  redirect: JOI.string().allow(null, ""),
 });
 
 adminRouter.post("/broadcast", authValidation, async (req, res) => {
@@ -194,6 +225,8 @@ adminRouter.post("/broadcast", authValidation, async (req, res) => {
 adminRouter.get("/orders", authValidation, async (req, res) => {
   let user = res.locals.user;
   let { sortBy, dir } = req.query;
+  let limit = req.query.limit || 0;
+  let skip = req.query.skip || 0;
 
   if (!sortBy) sortBy = "name";
   if (!dir) dir = "asc";
@@ -202,9 +235,13 @@ adminRouter.get("/orders", authValidation, async (req, res) => {
     if (!user.isAdmin)
       return res.send({ message: "Access Denied!", ok: false });
 
+    let count = await orderModel.count();
+
     let orders = await orderModel
       .find()
       .sort([[sortBy, dir]])
+      .limit(limit)
+      .skip(skip)
       .populate("bidder auctioneer")
       .populate({
         path: "bid",
@@ -217,7 +254,7 @@ adminRouter.get("/orders", authValidation, async (req, res) => {
         },
       });
 
-    res.send({ data: orders, ok: true });
+    res.send({ data: { orders, count }, ok: true });
   } catch (err) {
     console.log(err);
   }

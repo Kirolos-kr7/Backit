@@ -439,7 +439,10 @@ bidRouter.get("/category/:cat", async (req, res) => {
       if (index === bids.length - 1) {
         let bidCount = filteredBids.length;
         let paginatedBids = [];
-        paginatedBids = filteredBids.slice(skip, skip + limit);
+        paginatedBids = filteredBids.slice(
+          skip,
+          parseInt(skip) + parseInt(limit)
+        );
 
         return res.send({
           data: { bids: paginatedBids, count: bidCount },
