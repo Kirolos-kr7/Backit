@@ -46,12 +46,20 @@ orderRouter.patch("/activate/:orderID", authValidation, async (req, res) => {
 
 orderRouter.get("/user", authValidation, async (req, res) => {
   let { user } = res.locals;
+  let limit = req.query.limit || 0;
+  let skip = req.query.skip || 0;
 
   try {
+    let count = await orderModel.count({
+      $or: [{ bidder: user.id }, { auctioneer: user.id }],
+    });
+
     let orders = await orderModel
       .find({
         $or: [{ bidder: user.id }, { auctioneer: user.id }],
       })
+      .limit(limit)
+      .skip(skip)
       .populate({
         path: "bid",
         model: "Bid",
@@ -63,7 +71,7 @@ orderRouter.get("/user", authValidation, async (req, res) => {
         },
       });
 
-    return res.send({ data: orders, ok: true });
+    return res.send({ data: { orders, count }, ok: true });
   } catch (err) {
     console.log(err);
   }
