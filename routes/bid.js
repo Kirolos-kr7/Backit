@@ -417,6 +417,8 @@ bidRouter.get("/purchases", authValidation, async (req, res) => {
 
 bidRouter.get("/category/:cat", async (req, res) => {
   const { cat } = req.params;
+  let limit = req.query.limit || 0;
+  let skip = req.query.skip || 0;
 
   try {
     let filteredBids = [];
@@ -434,8 +436,16 @@ bidRouter.get("/category/:cat", async (req, res) => {
         filteredBids.push(bid);
       }
 
-      if (index === bids.length - 1)
-        return res.send({ data: filteredBids, ok: true });
+      if (index === bids.length - 1) {
+        let bidCount = filteredBids.length;
+        let paginatedBids = [];
+        paginatedBids = filteredBids.slice(skip, skip + limit);
+
+        return res.send({
+          data: { bids: paginatedBids, count: bidCount },
+          ok: true,
+        });
+      }
     });
   } catch (err) {
     console.log(err);
