@@ -10,6 +10,7 @@ const reportRouter = express.Router();
 //identify the requests of every thing
 const reportSchema = JOI.object({
   reporter: JOI.string(),
+  for: JOI.string(),
   type: JOI.string().min(3).max(32).required(),
   description: JOI.string().min(3).required(),
   recipient: JOI.string(),
@@ -23,6 +24,7 @@ reportRouter.post("/add", authValidation, async (req, res) => {
   let report = {
     reporter: user.id,
     type: req.body.type,
+    for: req.body.for,
     description: req.body.description,
     recipient: req.body.recipient,
   };

@@ -5,6 +5,7 @@ const reportSchema = new Schema(
   {
     reporter: { type: Types.ObjectId, ref: "User", required: true },
     recipient: { type: Types.ObjectId, ref: "User", required: true },
+    for: { type: Types.ObjectId, ref: "Bid", required: true },
     type: {
       type: String,
       required: true,

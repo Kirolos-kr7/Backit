@@ -271,11 +271,16 @@ bidRouter.get("/recommended", authValidation, async (req, res) => {
 
   pythonProcess.stdout.on("data", async (data) => {
     let result = data.toString().trim();
+
     if (result != "N/F") {
       let bidIds = result.split(" ");
-      let similarBids = await bidModel.find({ _id: { $in: bidIds } });
 
-      return res.send({ data: similarBids, ok: true });
+      let recommendedBids = await bidModel
+        .find({ _id: { $in: bidIds }, user: { $ne: user.id } })
+        .limit(4)
+        .populate("item");
+
+      return res.send({ data: recommendedBids, ok: true });
     } else {
       return res.send({ message: "No Data Found", ok: false });
     }

@@ -52,11 +52,12 @@ top_4_similar_bids = list(
 
 result = ''
 for bid in top_4_similar_bids:
-    result += (bid + ' ')
+    if(bid != sys.argv[2]):
+        result += (bid + ' ')
 
 if(not result):
     print('N/F')
-    sys.stdout.flush()
 else:
     print(result)
-    sys.stdout.flush()
+
+sys.stdout.flush()

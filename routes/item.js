@@ -199,13 +199,19 @@ itemRouter.patch("/edit/:itemID", authValidation, async (req, res) => {
 
 itemRouter.get("/all", authValidation, async (req, res) => {
   let user = res.locals.user;
+  let limit = req.query.limit || 0;
+  let skip = req.query.skip || 0;
 
   try {
-    let allItems = await itemModel
-      .find({ uID: user.id })
-      .sort({ crearedAt: -1 });
+    let count = await itemModel.count({ uID: user.id });
 
-    res.send({ data: allItems, ok: true });
+    let items = await itemModel
+      .find({ uID: user.id })
+      .sort({ crearedAt: -1 })
+      .skip(skip)
+      .limit(limit);
+
+    res.send({ data: { items, count }, ok: true });
   } catch (err) {
     console.log(err);
   }

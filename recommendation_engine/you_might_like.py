@@ -72,10 +72,8 @@ items_to_recommend_User_A = [
     bidid for bidid in items_viewed_bysimilar_bidder if bidid not in items_viewed_by_A]
 
 
-bids_to_send = items_to_recommend_User_A[:4]
-
 result = ''
-for bid in bids_to_send:
+for bid in items_to_recommend_User_A:
     result += (bid + ' ')
 
 
