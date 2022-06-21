@@ -10,6 +10,7 @@ const { v1: uuid } = require("uuid");
 const userModel = require("../models/userModel");
 const tokenModel = require("../models/tokenModel");
 const ImageKit = require("imagekit");
+const logModel = require("../models/logModel");
 
 const mailjet = require("node-mailjet").connect(
   "92ac5ce8ae8ae0ff255cd6f5bb46ce69",
@@ -508,10 +509,19 @@ authRouter.patch("/user-role", authValidation, async (req, res) => {
       { isAdmin: !isRegistered.isAdmin }
     );
     if (updatedUser.modifiedCount > 0) {
-      return res.send({
-        message: "User Role is Changed",
-        ok: true,
+      let log = await logModel.create({
+        admin: user.email,
+        user: isRegistered.email,
+        message: !isRegistered.isAdmin
+          ? `${user.email} has assigned ${isRegistered.email} as an admin.`
+          : `${user.email} has revoked ${isRegistered.email} from being admin.`,
       });
+
+      if (log)
+        return res.send({
+          message: "User Role is Changed",
+          ok: true,
+        });
     }
   } catch (err) {
     console.log(err);

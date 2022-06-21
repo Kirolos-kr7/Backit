@@ -30,5 +30,7 @@ const bidSchema = new Schema(
   { timestamps: true }
 );
 
+bidSchema.index({ "$**": "text" });
+
 const bidModel = mongoose.model("Bid", bidSchema);
 module.exports = bidModel;

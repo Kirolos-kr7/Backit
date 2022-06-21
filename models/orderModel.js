@@ -41,5 +41,7 @@ const orderSchema = new Schema(
   { timestamps: true }
 );
 
+orderSchema.index({ "$**": "text" });
+
 const orderModel = model("Order", orderSchema);
 module.exports = orderModel;

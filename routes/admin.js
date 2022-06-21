@@ -4,6 +4,8 @@ const userModel = require("../models/userModel");
 const JOI = require("joi");
 const reportModel = require("../models/reportModel");
 const orderModel = require("../models/orderModel");
+const logModel = require("../models/logModel");
+const ObjectId = require("mongoose").Types.ObjectId;
 
 const adminRouter = express.Router();
 
@@ -28,6 +30,42 @@ adminRouter.get("/users", authValidation, async (req, res) => {
       .limit(limit)
       .skip(skip)
       .select("name email isAdmin gender phone address createdAt");
+
+    res.send({ data: { users, count }, ok: true });
+  } catch (err) {
+    console.log(err);
+  }
+});
+
+adminRouter.get("/searchUsers/:q", authValidation, async (req, res) => {
+  let user = res.locals.user;
+  let { sortBy, dir } = req.query;
+  let limit = req.query.limit || 0;
+  let skip = req.query.skip || 0;
+  let q = req.params.q;
+
+  if (!sortBy) sortBy = "name";
+  if (!dir) dir = "asc";
+
+  try {
+    if (!user.isAdmin)
+      return res.send({ message: "Access Denied!", ok: false });
+
+    let query;
+
+    if (q.length === 24) query = { _id: ObjectId(q) };
+    else query = { $text: { $search: q } };
+
+    let count = await userModel.count(query);
+
+    let users = await userModel
+      .find(query)
+      .sort([[sortBy, dir]])
+      .limit(limit)
+      .skip(skip)
+      .select("name email isAdmin gender phone address createdAt");
+
+    console.log(users);
 
     res.send({ data: { users, count }, ok: true });
   } catch (err) {
@@ -76,6 +114,50 @@ adminRouter.get("/bids", authValidation, async (req, res) => {
       .sort([[sortBy, dir]])
       .limit(limit)
       .skip(skip)
+      .select("-bidsHistory -__v")
+      .populate("item", "name type description images")
+      .populate("user", "name email profilePicture");
+
+    res.send({ data: { bids, count }, ok: true });
+  } catch (err) {
+    console.log(err);
+  }
+});
+
+adminRouter.get("/searchBids/:q", authValidation, async (req, res) => {
+  let user = res.locals.user;
+  let { sortBy, dir } = req.query;
+  let limit = req.query.limit || 0;
+  let skip = req.query.skip || 0;
+  let q = req.params.q;
+
+  if (!sortBy) sortBy = "name";
+  if (!dir) dir = "asc";
+
+  try {
+    if (!user.isAdmin)
+      return res.send({ message: "Access Denied!", ok: false });
+
+    let query;
+
+    if (q.length === 24)
+      query = {
+        $or: [
+          { _id: ObjectId(q) },
+          { item: ObjectId(q) },
+          { user: ObjectId(q) },
+        ],
+      };
+    else query = { $text: { $search: q } };
+
+    let count = await bidModel.count(query);
+
+    let bids = await bidModel
+      .find(query)
+      .sort([[sortBy, dir]])
+      .limit(limit)
+      .skip(skip)
+      .select("-bidsHistory -__v")
       .populate("item", "name type description images")
       .populate("user", "name email profilePicture");
 
@@ -119,9 +201,51 @@ adminRouter.get("/reports", authValidation, async (req, res) => {
 
     let reports = await reportModel
       .find()
+      .sort([[sortBy, dir]])
       .limit(limit)
       .skip(skip)
+      .populate("reporter recipient");
+
+    res.send({ data: { reports, count }, ok: true });
+  } catch (err) {
+    console.log(err);
+  }
+});
+
+adminRouter.get("/searchReports/:q", authValidation, async (req, res) => {
+  let user = res.locals.user;
+  let { sortBy, dir } = req.query;
+  let limit = req.query.limit || 0;
+  let skip = req.query.skip || 0;
+  let q = req.params.q;
+
+  if (!sortBy) sortBy = "name";
+  if (!dir) dir = "asc";
+
+  try {
+    if (!user.isAdmin)
+      return res.send({ message: "Access Denied!", ok: false });
+
+    let query;
+
+    if (q.length === 24)
+      query = {
+        $or: [
+          { _id: ObjectId(q) },
+          { reporter: ObjectId(q) },
+          { recipient: ObjectId(q) },
+          { for: ObjectId(q) },
+        ],
+      };
+    else query = { $text: { $search: q } };
+
+    let count = await reportModel.count(query);
+
+    let reports = await reportModel
+      .find(query)
       .sort([[sortBy, dir]])
+      .limit(limit)
+      .skip(skip)
       .populate("reporter recipient");
 
     res.send({ data: { reports, count }, ok: true });
@@ -260,6 +384,58 @@ adminRouter.get("/orders", authValidation, async (req, res) => {
   }
 });
 
+adminRouter.get("/searchOrders/:q", authValidation, async (req, res) => {
+  let user = res.locals.user;
+  let { sortBy, dir } = req.query;
+  let limit = req.query.limit || 0;
+  let skip = req.query.skip || 0;
+  let q = req.params.q;
+
+  if (!sortBy) sortBy = "name";
+  if (!dir) dir = "asc";
+
+  try {
+    if (!user.isAdmin)
+      return res.send({ message: "Access Denied!", ok: false });
+
+    let query;
+
+    if (q.length === 24)
+      query = {
+        $or: [
+          { _id: ObjectId(q) },
+          { bid: ObjectId(q) },
+          { bidder: ObjectId(q) },
+          { auctioneer: ObjectId(q) },
+        ],
+      };
+    else query = { $text: { $search: q } };
+
+    let count = await orderModel.count(query);
+
+    let orders = await orderModel
+      .find(query)
+      .sort([[sortBy, dir]])
+      .limit(limit)
+      .skip(skip)
+      .populate("bidder auctioneer")
+      .populate({
+        path: "bid",
+        model: "Bid",
+        select: "item",
+        populate: {
+          path: "item",
+          model: "Item",
+          select: "-createdAt -updatedAt -uID -__V",
+        },
+      });
+
+    res.send({ data: { orders, count }, ok: true });
+  } catch (err) {
+    console.log(err);
+  }
+});
+
 adminRouter.delete("/order/:orderID", authValidation, async (req, res) => {
   let { user } = res.locals;
   let { orderID } = req.params;
@@ -324,6 +500,35 @@ adminRouter.get("/counts", authValidation, async (req, res) => {
       console.log(err);
       return res.send({ message: err, ok: false });
     });
+});
+
+adminRouter.get("/logs", authValidation, async (req, res) => {
+  let user = res.locals.user;
+  let { q } = req.query;
+  let limit = req.query.limit || 0;
+  let skip = req.query.skip || 0;
+
+  try {
+    if (!user.isAdmin)
+      return res.send({ message: "Access Denied!", ok: false });
+
+    let query;
+
+    if (q.trim() === "") query = {};
+    else if (q.length === 24) query = { _id: ObjectId(q) };
+    else query = { $text: { $search: q } };
+
+    let count = await logModel.count(query);
+    let logs = await logModel
+      .find(query)
+      .sort({ createdAt: -1 })
+      .limit(limit)
+      .skip(skip);
+
+    res.send({ data: { logs, count }, ok: true });
+  } catch (err) {
+    console.log(err);
+  }
 });
 
 module.exports = adminRouter;

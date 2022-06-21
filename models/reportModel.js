@@ -24,5 +24,7 @@ const reportSchema = new Schema(
   { timestamps: true }
 );
 
+reportSchema.index({ "$**": "text" });
+
 const reportModel = model("Report", reportSchema);
 module.exports = reportModel;
