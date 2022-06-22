@@ -5,6 +5,7 @@ const JOI = require("joi");
 const reportModel = require("../models/reportModel");
 const orderModel = require("../models/orderModel");
 const logModel = require("../models/logModel");
+const banModel = require("../models/banModel");
 const ObjectId = require("mongoose").Types.ObjectId;
 
 const adminRouter = express.Router();
@@ -73,26 +74,30 @@ adminRouter.get("/searchUsers/:q", authValidation, async (req, res) => {
   }
 });
 
-adminRouter.delete(
-  "/user-account/:userID",
-  authValidation,
-  async (req, res) => {
-    let { user } = res.locals;
-    let { userID } = req.params;
+adminRouter.delete("/user-account", authValidation, async (req, res) => {
+  let { user } = res.locals;
+  let { email, message, days } = req.body;
 
-    try {
-      if (!user.isAdmin)
-        return res.send({ message: "Access Denied!", ok: false });
+  try {
+    if (!user.isAdmin)
+      return res.send({ message: "Access Denied!", ok: false });
 
-      let deletedUser = await userModel.deleteOne({ _id: userID });
-      if (deletedUser.deletedCount > 0) {
-        res.send({ message: "User Removed Successfully", ok: true });
-      } else res.send({ message: "User Removal Failed", ok: false });
-    } catch (err) {
-      console.log(err);
-    }
+    let xUser = await banModel.create({ user: email, message, days });
+
+    await logModel.create({
+      admin: user.email,
+      user: email,
+      message: `${user.email} has applied a ${message} for ${email}`,
+    });
+
+    if (xUser) {
+      res.send({ message: "User Banned Successfully", ok: true });
+    } else res.send({ message: "User Ban Failed", ok: false });
+  } catch (err) {
+    if (err.code === 11000) res.json({ message: "User Already Banned" });
+    else res.json({ message: err.message });
   }
-);
+});
 
 adminRouter.get("/bids", authValidation, async (req, res) => {
   let user = res.locals.user;

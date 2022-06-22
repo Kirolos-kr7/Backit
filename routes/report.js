@@ -4,6 +4,9 @@ const authValidation = require("../middlewares/authValidation"); //import to val
 const { v4: uuidv4 } = require("uuid"); // build unique id
 const JOI = require("joi"); //use joi to easier form
 const userModel = require("../models/userModel");
+const banModel = require("../models/banModel");
+const bidModel = require("../models/bidModel");
+const logModel = require("../models/logModel");
 
 const reportRouter = express.Router();
 
@@ -87,7 +90,7 @@ reportRouter.delete("/delete", authValidation, async (req, res) => {
 reportRouter.patch("/feedback/:reportID", authValidation, async (req, res) => {
   let user = res.locals.user;
   const { reportID } = req.params;
-  const { status } = req.body;
+  const { status, action, recipient, message, bidID } = req.body;
 
   if (user.isAdmin) {
     if (!reportID) {
@@ -105,6 +108,31 @@ reportRouter.patch("/feedback/:reportID", authValidation, async (req, res) => {
     }
 
     try {
+      if (status === "took the appropriate action") {
+        if (!action)
+          return res.send({
+            message: "An action is required",
+            ok: false,
+          });
+
+        banUser({
+          email: recipient,
+          message,
+          days:
+            action.toLowerCase() === "ban user for a week and remove bid"
+              ? 7
+              : 0,
+        });
+
+        await bidModel.deleteOne({ _id: bidID });
+      }
+
+      await logModel.create({
+        admin: user.email,
+        user: recipient,
+        message: `${user.email} has applied a ${action} for ${recipient}`,
+      });
+
       let feedback = await reportModel.updateOne(
         {
           _id: reportID,
@@ -142,6 +170,7 @@ reportRouter.get("/user", authValidation, async (req, res) => {
       .find({
         reporter: user.id,
       })
+      .sort({ createdAt: -1 })
       .limit(limit)
       .skip(skip);
 
@@ -160,5 +189,10 @@ reportRouter.get("/user", authValidation, async (req, res) => {
     console.log(err);
   }
 });
+
+const banUser = async ({ email, message, days = 0 }) => {
+  let xUser = await banModel.create({ user: email, message, days });
+  if (xUser) return 1;
+};
 
 module.exports = reportRouter;

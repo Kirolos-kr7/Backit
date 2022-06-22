@@ -11,6 +11,8 @@ const userModel = require("../models/userModel");
 const tokenModel = require("../models/tokenModel");
 const ImageKit = require("imagekit");
 const logModel = require("../models/logModel");
+const banModel = require("../models/banModel");
+const dayjs = require("dayjs");
 
 const mailjet = require("node-mailjet").connect(
   "92ac5ce8ae8ae0ff255cd6f5bb46ce69",
@@ -423,6 +425,33 @@ authRouter.post("/login", async (req, res) => {
     let thisUser = await userModel.findOne({ email: user.email });
     if (!thisUser)
       return res.send({ message: "User Email Not Found", ok: false });
+
+    // get banned user
+    let xUser = await banModel.findOne({ user: user.email });
+
+    // check if user is banned
+    if (xUser) {
+      if (xUser.days === 0)
+        return res.send({
+          message: `Your account has been banned forever you need to contact support`,
+          ok: false,
+        });
+
+      let today = dayjs();
+      let banDay = dayjs(xUser.createdAt);
+      let duration = today.diff(banDay, "d");
+
+      if (duration >= xUser.days) {
+        await banModel.deleteOne({ _id: xUser._id });
+      } else {
+        return res.send({
+          message: `Your account has been banned wait ${
+            xUser.days - duration
+          } days or contact support`,
+          ok: false,
+        });
+      }
+    }
 
     // comparing hashed password with user password
     bcrypt.compare(user.password, thisUser.password, async (err, result) => {
