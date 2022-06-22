@@ -38,7 +38,7 @@ app.use("/report", reportRouter);
 app.use("/admin", adminRouter);
 
 app.get("/", (req, res) => {
-  res.send("Running");
+  res.status(200).send("Running");
 });
 
 const io = new Server(httpServer, {

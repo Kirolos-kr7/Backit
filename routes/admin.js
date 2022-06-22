@@ -1,61 +1,27 @@
+/** IMPORTS **/
 const express = require("express");
 const bidModel = require("../models/bidModel");
 const userModel = require("../models/userModel");
-const JOI = require("joi");
 const reportModel = require("../models/reportModel");
 const orderModel = require("../models/orderModel");
 const logModel = require("../models/logModel");
 const banModel = require("../models/banModel");
+const JOI = require("joi");
+const isAdmin = require("../middlewares/isAdmin");
 const ObjectId = require("mongoose").Types.ObjectId;
 
+// create admin router
 const adminRouter = express.Router();
 
-adminRouter.get("/users", authValidation, async (req, res) => {
-  let user = res.locals.user;
-  let { sortBy, dir } = req.query;
-  let limit = req.query.limit || 0;
-  let skip = req.query.skip || 0;
-
-  if (!sortBy) sortBy = "name";
-  if (!dir) dir = "asc";
+adminRouter.get("/users", authValidation, isAdmin, async (req, res) => {
+  let { sortBy = "name", dir = "asc", limit = 0, skip = 0, s } = req.query;
+  let query = {};
 
   try {
-    if (!user.isAdmin)
-      return res.send({ message: "Access Denied!", ok: false });
-
-    let count = await userModel.count();
-
-    let users = await userModel
-      .find()
-      .sort([[sortBy, dir]])
-      .limit(limit)
-      .skip(skip)
-      .select("name email isAdmin gender phone address createdAt");
-
-    res.send({ data: { users, count }, ok: true });
-  } catch (err) {
-    console.log(err);
-  }
-});
-
-adminRouter.get("/searchUsers/:q", authValidation, async (req, res) => {
-  let user = res.locals.user;
-  let { sortBy, dir } = req.query;
-  let limit = req.query.limit || 0;
-  let skip = req.query.skip || 0;
-  let q = req.params.q;
-
-  if (!sortBy) sortBy = "name";
-  if (!dir) dir = "asc";
-
-  try {
-    if (!user.isAdmin)
-      return res.send({ message: "Access Denied!", ok: false });
-
-    let query;
-
-    if (q.length === 24) query = { _id: ObjectId(q) };
-    else query = { $text: { $search: q } };
+    if (s) {
+      if (ObjectId.isValid(s)) query = { _id: ObjectId(s) };
+      else query = { $text: { $search: s } };
+    }
 
     let count = await userModel.count(query);
 
@@ -66,94 +32,89 @@ adminRouter.get("/searchUsers/:q", authValidation, async (req, res) => {
       .skip(skip)
       .select("name email isAdmin gender phone address createdAt");
 
-    console.log(users);
-
-    res.send({ data: { users, count }, ok: true });
+    res.status(200).json({ data: { users, count }, ok: true });
   } catch (err) {
-    console.log(err);
+    res.status(400).json({ message: err.message, ok: false });
   }
 });
 
-adminRouter.delete("/user-account", authValidation, async (req, res) => {
-  let { user } = res.locals;
-  let { email, message, days } = req.body;
-
-  try {
-    if (!user.isAdmin)
-      return res.send({ message: "Access Denied!", ok: false });
-
-    let xUser = await banModel.create({ user: email, message, days });
-
-    await logModel.create({
-      admin: user.email,
-      user: email,
-      message: `${user.email} has applied a ${message} for ${email}`,
-    });
-
-    if (xUser) {
-      res.send({ message: "User Banned Successfully", ok: true });
-    } else res.send({ message: "User Ban Failed", ok: false });
-  } catch (err) {
-    if (err.code === 11000) res.json({ message: "User Already Banned" });
-    else res.json({ message: err.message });
-  }
-});
-
-adminRouter.get("/bids", authValidation, async (req, res) => {
+adminRouter.patch("/user-role", authValidation, isAdmin, async (req, res) => {
   let user = res.locals.user;
-  let { sortBy, dir } = req.query;
-  let limit = req.query.limit || 0;
-  let skip = req.query.skip || 0;
-
-  if (!sortBy) sortBy = "name";
-  if (!dir) dir = "asc";
+  let email = req.body.email;
 
   try {
-    if (!user.isAdmin)
-      return res.send({ message: "Access Denied!", ok: false });
+    // checking if a user exists
+    let isRegistered = await userModel.findOne({ email });
+    if (!isRegistered)
+      return res.status(400).json({ message: "User Not Found", ok: false });
 
-    let count = await bidModel.count();
+    // changing user's admin privlages and saving in db
+    let updatedUser = await userModel.updateOne(
+      { email },
+      { isAdmin: !isRegistered.isAdmin }
+    );
+    if (updatedUser.modifiedCount > 0) {
+      let log = await logModel.create({
+        admin: user.email,
+        user: isRegistered.email,
+        message: !isRegistered.isAdmin
+          ? `${user.email} has assigned ${isRegistered.email} as an admin.`
+          : `${user.email} has revoked ${isRegistered.email} from being admin.`,
+      });
 
-    let bids = await bidModel
-      .find()
-      .sort([[sortBy, dir]])
-      .limit(limit)
-      .skip(skip)
-      .select("-bidsHistory -__v")
-      .populate("item", "name type description images")
-      .populate("user", "name email profilePicture");
-
-    res.send({ data: { bids, count }, ok: true });
+      if (log)
+        return res.status(200).json({
+          message: "User Role is Changed",
+          ok: true,
+        });
+    }
   } catch (err) {
-    console.log(err);
+    res.status(400).json({ message: err.message, ok: false });
   }
 });
 
-adminRouter.get("/searchBids/:q", authValidation, async (req, res) => {
-  let user = res.locals.user;
-  let { sortBy, dir } = req.query;
-  let limit = req.query.limit || 0;
-  let skip = req.query.skip || 0;
-  let q = req.params.q;
+adminRouter.delete(
+  "/ban-account",
+  authValidation,
+  isAdmin,
+  async (req, res) => {
+    let { user } = res.locals;
+    let { email, message, days } = req.body;
 
-  if (!sortBy) sortBy = "name";
-  if (!dir) dir = "asc";
+    try {
+      await banModel.create({ user: email, message, days });
+
+      await logModel.create({
+        admin: user.email,
+        user: email,
+        message: `${user.email} has applied a ${message} for ${email}`,
+      });
+
+      res.status(200).json({ message: "User Banned Successfully", ok: true });
+    } catch (err) {
+      if (err.code === 11000)
+        res.status(400).json({ message: "User Already Banned", ok: false });
+      else res.status(400).json({ message: err.message, ok: false });
+    }
+  }
+);
+
+adminRouter.get("/bids", authValidation, isAdmin, async (req, res) => {
+  let { sortBy = "name", dir = "asc", limit = 0, skip = 0, s } = req.query;
+  let query = {};
 
   try {
-    if (!user.isAdmin)
-      return res.send({ message: "Access Denied!", ok: false });
-
-    let query;
-
-    if (q.length === 24)
-      query = {
-        $or: [
-          { _id: ObjectId(q) },
-          { item: ObjectId(q) },
-          { user: ObjectId(q) },
-        ],
-      };
-    else query = { $text: { $search: q } };
+    if (s) {
+      if (ObjectId.isValid(s))
+        query = {
+          $or: [
+            { _id: ObjectId(s) },
+            { item: ObjectId(s) },
+            { user: ObjectId(s) },
+          ],
+        };
+      else query = { $text: { $search: s } };
+    }
 
     let count = await bidModel.count(query);
 
@@ -166,83 +127,134 @@ adminRouter.get("/searchBids/:q", authValidation, async (req, res) => {
       .populate("item", "name type description images")
       .populate("user", "name email profilePicture");
 
-    res.send({ data: { bids, count }, ok: true });
+    res.status(200).json({ data: { bids, count }, ok: true });
   } catch (err) {
-    console.log(err);
+    res.status(400).json({ message: err.message, ok: false });
   }
 });
 
 adminRouter.delete("/bid/:bidID", authValidation, async (req, res) => {
-  let { user } = res.locals;
   let { bidID } = req.params;
 
   try {
-    if (!user.isAdmin)
-      return res.send({ message: "Access Denied!", ok: false });
-
     let deletedBid = await bidModel.deleteOne({ _id: bidID });
-    if (deletedBid.deletedCount > 0) {
-      res.send({ message: "Bid Removed Successfully", ok: true });
-    } else res.send({ message: "Bid Removal Failed", ok: false });
+
+    if (deletedBid.deletedCount > 0)
+      res.status(200).json({ message: "Bid Removed Successfully", ok: true });
+    else res.status(400).json({ message: "Bid Removal Failed", ok: false });
   } catch (err) {
-    console.log(err);
+    res.status(400).json({ message: err.message, ok: false });
   }
 });
 
-adminRouter.get("/reports", authValidation, async (req, res) => {
-  let user = res.locals.user;
-  let { sortBy, dir } = req.query;
-  let limit = req.query.limit || 0;
-  let skip = req.query.skip || 0;
-
-  if (!sortBy) sortBy = "name";
-  if (!dir) dir = "asc";
+adminRouter.get("/orders", authValidation, isAdmin, async (req, res) => {
+  let { sortBy = "createdAt", dir = -1, limit = 0, skip = 0, s } = req.query;
+  let query = {};
 
   try {
-    if (!user.isAdmin)
-      return res.send({ message: "Access Denied!", ok: false });
+    if (s) {
+      if (ObjectId.isValid(s))
+        query = {
+          $or: [
+            { _id: ObjectId(s) },
+            { bid: ObjectId(s) },
+            { bidder: ObjectId(s) },
+            { auctioneer: ObjectId(s) },
+          ],
+        };
+      else query = { $text: { $search: s } };
+    }
 
-    let count = await reportModel.count();
+    let count = await orderModel.count(query);
 
-    let reports = await reportModel
-      .find()
+    let orders = await orderModel
+      .find(query)
       .sort([[sortBy, dir]])
       .limit(limit)
       .skip(skip)
-      .populate("reporter recipient");
+      .populate("bidder auctioneer")
+      .populate({
+        path: "bid",
+        model: "Bid",
+        select: "item",
+        populate: {
+          path: "item",
+          model: "Item",
+          select: "-createdAt -updatedAt -uID -__V",
+        },
+      });
 
-    res.send({ data: { reports, count }, ok: true });
+    res.status(200).json({ data: { orders, count }, ok: true });
   } catch (err) {
-    console.log(err);
+    res.status(400).json({ message: err.message, ok: false });
   }
 });
 
-adminRouter.get("/searchReports/:q", authValidation, async (req, res) => {
-  let user = res.locals.user;
-  let { sortBy, dir } = req.query;
-  let limit = req.query.limit || 0;
-  let skip = req.query.skip || 0;
-  let q = req.params.q;
+adminRouter.delete(
+  "/order/:orderID",
+  authValidation,
+  isAdmin,
+  async (req, res) => {
+    let { orderID } = req.params;
 
-  if (!sortBy) sortBy = "name";
-  if (!dir) dir = "asc";
+    try {
+      let deletedOrder = await orderModel.deleteOne({ _id: orderID });
+
+      if (deletedOrder.deletedCount > 0) {
+        res
+          .status(200)
+          .json({ message: "Order Removed Successfully", ok: true });
+      } else
+        res.status(400).json({ message: "Order Removal Failed", ok: false });
+    } catch (err) {
+      res.status(400).json({ message: err.message, ok: false });
+    }
+  }
+);
+
+adminRouter.patch(
+  "/edit/:orderID",
+  authValidation,
+  isAdmin,
+  async (req, res) => {
+    let { orderID } = req.params;
+    let { status } = req.body;
+
+    try {
+      if (!status)
+        return res
+          .status(200)
+          .json({ message: "New status is required", ok: false });
+
+      let order = await orderModel.updateOne({ _id: orderID }, { status });
+
+      if (order.modifiedCount > 0)
+        return res
+          .status(200)
+          .json({ message: "Edited Successfully", ok: true });
+    } catch (err) {
+      res.status(400).json({ message: err.message, ok: false });
+    }
+  }
+);
+
+adminRouter.get("/reports", authValidation, isAdmin, async (req, res) => {
+  let { sortBy = "name", dir = "asc", limit = 0, skip = 0, s } = req.query;
+  let query = {};
 
   try {
-    if (!user.isAdmin)
-      return res.send({ message: "Access Denied!", ok: false });
-
-    let query;
-
-    if (q.length === 24)
-      query = {
-        $or: [
-          { _id: ObjectId(q) },
-          { reporter: ObjectId(q) },
-          { recipient: ObjectId(q) },
-          { for: ObjectId(q) },
-        ],
-      };
-    else query = { $text: { $search: q } };
+    if (s) {
+      if (ObjectId.isValid(s))
+        query = {
+          $or: [
+            { _id: ObjectId(s) },
+            { reporter: ObjectId(s) },
+            { recipient: ObjectId(s) },
+            { for: ObjectId(s) },
+          ],
+        };
+      else query = { $text: { $search: s } };
+    }
 
     let count = await reportModel.count(query);
 
@@ -253,19 +265,108 @@ adminRouter.get("/searchReports/:q", authValidation, async (req, res) => {
       .skip(skip)
       .populate("reporter recipient");
 
-    res.send({ data: { reports, count }, ok: true });
+    res.status(200).json({ data: { reports, count }, ok: true });
   } catch (err) {
-    console.log(err);
+    res.status(400).json({ message: err.message, ok: false });
   }
 });
 
-adminRouter.get("/notifications", authValidation, async (req, res) => {
-  let user = res.locals.user;
-  let limit = req.query.limit || 0;
-  let skip = req.query.skip || 0;
+adminRouter.patch(
+  "/feedback/:reportID",
+  authValidation,
+  isAdmin,
+  async (req, res) => {
+    let user = res.locals.user;
+    const { reportID } = req.params;
+    const { status, action, recipient, message, bidID } = req.body;
 
-  // checking if a user is admin
-  if (!user.isAdmin) return res.send({ message: "Access Denied", ok: false });
+    if (!reportID) {
+      return res.status(400).json({
+        message: "ReportID is Required",
+        ok: false,
+      });
+    }
+
+    if (!status) {
+      return res.status(400).json({
+        message: "status Is Required",
+        ok: false,
+      });
+    }
+
+    try {
+      if (status === "took the appropriate action") {
+        if (!action)
+          res.status(400).json({
+            message: "An action is required",
+            ok: false,
+          });
+
+        banUser({
+          email: recipient,
+          message,
+          days:
+            action.toLowerCase() === "ban user for a week and remove bid"
+              ? 7
+              : 0,
+        });
+
+        await bidModel.deleteOne({ _id: bidID });
+      }
+
+      await logModel.create({
+        admin: user.email,
+        user: recipient,
+        message: `${user.email} has applied a ${action} for ${recipient}`,
+      });
+
+      let feedback = await reportModel.updateOne(
+        {
+          _id: reportID,
+        },
+        { status }
+      );
+
+      if (feedback.modifiedCount > 0) {
+        return res.status(200).json({
+          message: "report updated successfully",
+          ok: true,
+        });
+      }
+    } catch (err) {
+      res.status(400).json({ message: err.message, ok: false });
+    }
+  }
+);
+
+adminRouter.delete("/delete", authValidation, isAdmin, async (req, res) => {
+  const reportID = req.body.reportID;
+
+  if (!reportID) {
+    return res.status(400).json({
+      message: "report Id Is Required",
+      ok: false,
+    });
+  }
+
+  try {
+    let deletedreport = await reportModel.deleteOne({
+      _id: reportID,
+    });
+
+    if (deletedreport.deletedCount > 0) {
+      return res.status(200).json({
+        message: "report Deleted successfully",
+        ok: true,
+      });
+    }
+  } catch (err) {
+    res.status(400).json({ message: err.message, ok: false });
+  }
+});
+
+adminRouter.get("/notifications", authValidation, isAdmin, async (req, res) => {
+  let { limit = 0, skip = 0 } = req.query;
 
   try {
     // get main user
@@ -292,7 +393,7 @@ adminRouter.get("/notifications", authValidation, async (req, res) => {
     );
 
     // sending sorted notifications
-    return res.send({
+    return res.status(200).json({
       data: {
         notifications: paginatedNotifications,
         count,
@@ -300,7 +401,7 @@ adminRouter.get("/notifications", authValidation, async (req, res) => {
       ok: true,
     });
   } catch (err) {
-    console.log(err);
+    res.status(400).json({ message: err.message, ok: false });
   }
 });
 
@@ -316,17 +417,15 @@ let ntSchema = JOI.object({
   redirect: JOI.string().allow(null, ""),
 });
 
-adminRouter.post("/broadcast", authValidation, async (req, res) => {
-  let user = res.locals.user;
+adminRouter.post("/broadcast", authValidation, isAdmin, async (req, res) => {
   let { title, message, redirect } = req.body;
-
-  // checking if a user is admin
-  if (!user.isAdmin) return res.send({ message: "Access Denied", ok: false });
 
   try {
     let isValid = ntSchema.validate({ title, message, redirect });
     if (isValid.error)
-      return res.send({ message: isValid.error.details[0].message, ok: false });
+      return res
+        .status(200)
+        .json({ message: isValid.error.details[0].message, ok: false });
 
     // getting all user
     let users = await userModel.find();
@@ -342,148 +441,16 @@ adminRouter.post("/broadcast", authValidation, async (req, res) => {
       await users[i].save();
     }
 
-    return res.send({
+    return res.status(200).json({
       message: "Broadcasted Successfully",
       ok: true,
     });
   } catch (err) {
-    console.log(err);
+    res.status(400).json({ message: err.message, ok: false });
   }
 });
 
-adminRouter.get("/orders", authValidation, async (req, res) => {
-  let user = res.locals.user;
-  let { sortBy, dir } = req.query;
-  let limit = req.query.limit || 0;
-  let skip = req.query.skip || 0;
-
-  if (!sortBy) sortBy = "name";
-  if (!dir) dir = "asc";
-
-  try {
-    if (!user.isAdmin)
-      return res.send({ message: "Access Denied!", ok: false });
-
-    let count = await orderModel.count();
-
-    let orders = await orderModel
-      .find()
-      .sort([[sortBy, dir]])
-      .limit(limit)
-      .skip(skip)
-      .populate("bidder auctioneer")
-      .populate({
-        path: "bid",
-        model: "Bid",
-        select: "item",
-        populate: {
-          path: "item",
-          model: "Item",
-          select: "-createdAt -updatedAt -uID -__V",
-        },
-      });
-
-    res.send({ data: { orders, count }, ok: true });
-  } catch (err) {
-    console.log(err);
-  }
-});
-
-adminRouter.get("/searchOrders/:q", authValidation, async (req, res) => {
-  let user = res.locals.user;
-  let { sortBy, dir } = req.query;
-  let limit = req.query.limit || 0;
-  let skip = req.query.skip || 0;
-  let q = req.params.q;
-
-  if (!sortBy) sortBy = "name";
-  if (!dir) dir = "asc";
-
-  try {
-    if (!user.isAdmin)
-      return res.send({ message: "Access Denied!", ok: false });
-
-    let query;
-
-    if (q.length === 24)
-      query = {
-        $or: [
-          { _id: ObjectId(q) },
-          { bid: ObjectId(q) },
-          { bidder: ObjectId(q) },
-          { auctioneer: ObjectId(q) },
-        ],
-      };
-    else query = { $text: { $search: q } };
-
-    let count = await orderModel.count(query);
-
-    let orders = await orderModel
-      .find(query)
-      .sort([[sortBy, dir]])
-      .limit(limit)
-      .skip(skip)
-      .populate("bidder auctioneer")
-      .populate({
-        path: "bid",
-        model: "Bid",
-        select: "item",
-        populate: {
-          path: "item",
-          model: "Item",
-          select: "-createdAt -updatedAt -uID -__V",
-        },
-      });
-
-    res.send({ data: { orders, count }, ok: true });
-  } catch (err) {
-    console.log(err);
-  }
-});
-
-adminRouter.delete("/order/:orderID", authValidation, async (req, res) => {
-  let { user } = res.locals;
-  let { orderID } = req.params;
-
-  try {
-    if (!user.isAdmin)
-      return res.send({ message: "Access Denied!", ok: false });
-
-    let deletedOrder = await orderModel.deleteOne({ _id: orderID });
-    if (deletedOrder.deletedCount > 0) {
-      res.send({ message: "Order Removed Successfully", ok: true });
-    } else res.send({ message: "Order Removal Failed", ok: false });
-  } catch (err) {
-    console.log(err);
-  }
-});
-
-adminRouter.patch("/edit/:orderID", authValidation, async (req, res) => {
-  let { user } = res.locals;
-  let { orderID } = req.params;
-  let { status } = req.body;
-
-  try {
-    if (!user.isAdmin)
-      return res.send({ message: "Access Denied!", ok: false });
-
-    if (!status)
-      return res.send({ message: "New status is required", ok: false });
-
-    let order = await orderModel.updateOne({ _id: orderID }, { status });
-
-    if (order.modifiedCount > 0)
-      return res.send({ message: "Edited Successfully", ok: true });
-  } catch (err) {
-    console.log(err);
-  }
-});
-
-adminRouter.get("/counts", authValidation, async (req, res) => {
-  let { user } = res.locals;
-
-  if (!user.isAdmin) return res.send({ message: "Access Denied!", ok: false });
-
+adminRouter.get("/counts", authValidation, isAdmin, async (req, res) => {
   Promise.all([
     userModel.count(),
     bidModel.count(),
@@ -491,7 +458,7 @@ adminRouter.get("/counts", authValidation, async (req, res) => {
     reportModel.count(),
   ])
     .then(([users, bids, orders, reports]) => {
-      return res.send({
+      return res.status(200).json({
         data: {
           userCount: users,
           bidCount: bids,
@@ -502,26 +469,19 @@ adminRouter.get("/counts", authValidation, async (req, res) => {
       });
     })
     .catch((err) => {
-      console.log(err);
-      return res.send({ message: err, ok: false });
+      res.status(400).json({ message: err.message, ok: false });
     });
 });
 
-adminRouter.get("/logs", authValidation, async (req, res) => {
-  let user = res.locals.user;
-  let { q } = req.query;
-  let limit = req.query.limit || 0;
-  let skip = req.query.skip || 0;
+adminRouter.get("/logs", authValidation, isAdmin, async (req, res) => {
+  let { limit = 0, skip = 0, s } = req.query;
+  let query = {};
 
   try {
-    if (!user.isAdmin)
-      return res.send({ message: "Access Denied!", ok: false });
-
-    let query;
-
-    if (q.trim() === "") query = {};
-    else if (q.length === 24) query = { _id: ObjectId(q) };
-    else query = { $text: { $search: q } };
+    if (s) {
+      if (ObjectId.isValid(s)) query = { _id: ObjectId(s) };
+      else query = { $text: { $search: s } };
+    }
 
     let count = await logModel.count(query);
     let logs = await logModel
@@ -530,10 +490,16 @@ adminRouter.get("/logs", authValidation, async (req, res) => {
       .limit(limit)
       .skip(skip);
 
-    res.send({ data: { logs, count }, ok: true });
+    res.status(200).json({ data: { logs, count }, ok: true });
   } catch (err) {
-    console.log(err);
+    res.status(400).json({ message: err.message, ok: false });
   }
 });
 
+const banUser = async ({ email, message, days = 0 }) => {
+  let xUser = await banModel.create({ user: email, message, days });
+  if (xUser) return 1;
+};
+
+// export admin router
 module.exports = adminRouter;

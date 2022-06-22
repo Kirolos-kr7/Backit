@@ -1,11 +1,12 @@
 const express = require("express");
-const authValidation = require("../middlewares/authValidation"); //import to validation in middlewaresco
-const JOI = require("joi"); //use joi to easier form
+const authValidation = require("../middlewares/authValidation");
+const JOI = require("joi");
 const dayjs = require("dayjs");
 const orderModel = require("../models/orderModel");
-const userModel = require("../models/userModel");
+const ObjectId = require("mongoose").Types.ObjectId;
 
 const orderRouter = express.Router();
+
 const orderSchema = JOI.object({
   status: JOI.string().required(),
   paymentMethod: JOI.string().required(),
@@ -16,6 +17,9 @@ const orderSchema = JOI.object({
 
 orderRouter.patch("/activate/:orderID", authValidation, async (req, res) => {
   let { orderID } = req.params;
+
+  if (!ObjectId.isValid(orderID))
+    return res.status(404).json({ message: "Incorrect order id", ok: false });
 
   let order = {
     paymentMethod: req.body.paymentMethod,
@@ -28,7 +32,7 @@ orderRouter.patch("/activate/:orderID", authValidation, async (req, res) => {
   try {
     await orderSchema.validateAsync(order);
   } catch (err) {
-    return res.send({
+    return res.status(400).json({
       message: err.details[0].message,
       ok: false,
     });
@@ -38,16 +42,17 @@ orderRouter.patch("/activate/:orderID", authValidation, async (req, res) => {
     let thisOrder = await orderModel.updateOne({ _id: orderID }, order);
 
     if (thisOrder.modifiedCount > 0)
-      return res.send({ message: "Order Activated Successfully", ok: true });
+      return res
+        .status(200)
+        .json({ message: "Order Activated Successfully", ok: true });
   } catch (err) {
-    console.log(err);
+    res.status(400).json({ message: err.message, ok: false });
   }
 });
 
 orderRouter.get("/user", authValidation, async (req, res) => {
   let { user } = res.locals;
-  let limit = req.query.limit || 0;
-  let skip = req.query.skip || 0;
+  let { limit = 0, skip = 0 } = req.query;
 
   try {
     let count = await orderModel.count({
@@ -71,9 +76,9 @@ orderRouter.get("/user", authValidation, async (req, res) => {
         },
       });
 
-    return res.send({ data: { orders, count }, ok: true });
+    return res.status(200).json({ data: { orders, count }, ok: true });
   } catch (err) {
-    console.log(err);
+    res.status(400).json({ message: err.message, ok: false });
   }
 });
 
@@ -81,8 +86,8 @@ orderRouter.get("/:orderID", authValidation, async (req, res) => {
   let { user } = res.locals;
   let { orderID } = req.params;
 
-  if (orderID.length !== 24)
-    return res.send({ message: "Incorrect order id", ok: false });
+  if (!ObjectId.isValid(orderID))
+    return res.status(404).json({ message: "Incorrect order id", ok: false });
 
   try {
     let order = await orderModel
@@ -101,10 +106,12 @@ orderRouter.get("/:orderID", authValidation, async (req, res) => {
         },
       });
 
-    if (order) return res.send({ data: order, ok: true });
-    return res.send({ message: "No order with this id", ok: false });
+    if (order) return res.status(200).json({ data: order, ok: true });
+    return res
+      .status(400)
+      .json({ message: "No order with this id", ok: false });
   } catch (err) {
-    console.log(err);
+    res.status(400).json({ message: err.message, ok: false });
   }
 });
 

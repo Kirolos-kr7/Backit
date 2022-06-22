@@ -1,18 +1,20 @@
+/** IMPORTS **/
 const express = require("express");
-const itemModel = require("../models/itemModel"); //import to itemModel
-const bidModel = require("../models/bidModel"); //import to bidModel
-const authValidation = require("../middlewares/authValidation"); //import to validation in middlewares
+const itemModel = require("../models/itemModel");
+const bidModel = require("../models/bidModel");
+const authValidation = require("../middlewares/authValidation");
 const JOI = require("joi"); //use joi to easier form
 const { v1: uuid } = require("uuid");
+const ImageKit = require("imagekit");
 
-var ImageKit = require("imagekit");
-
+/** INITIALIZATIONS **/
 var imagekit = new ImageKit({
   publicKey: "public_QyIWVOnkYPjl4YXn3PGe3ymGrt4=",
   privateKey: "private_7WVBoOozqMA1E+OUmuJFzGi5KJ0=",
   urlEndpoint: "https://ik.imagekit.io/bidit",
 });
 
+// create item router
 const itemRouter = express.Router();
 
 //identify the requests of every thing
@@ -30,7 +32,9 @@ itemRouter.post("/add", authValidation, async (req, res) => {
   let { images } = req.body;
 
   if (images.length === 0)
-    return res.send({ message: "Atleast one image is required", ok: false });
+    return res
+      .status(400)
+      .json({ message: "Atleast one image is required", ok: false });
 
   let item = {
     name: req.body.name,
@@ -42,7 +46,7 @@ itemRouter.post("/add", authValidation, async (req, res) => {
   try {
     await itemSchema.validateAsync(item);
   } catch (err) {
-    return res.send({
+    return res.status(400).json({
       message: err.details[0].message,
       ok: false,
     });
@@ -67,7 +71,7 @@ itemRouter.post("/add", authValidation, async (req, res) => {
 
         if (index === images.length - 1) {
           await itemModel.findById(newItem.id).then((result) => {
-            return res.send({
+            return res.status(200).json({
               message: "Item Added Successfully",
               data: result,
               ok: true,
@@ -77,7 +81,7 @@ itemRouter.post("/add", authValidation, async (req, res) => {
       });
     }
   } catch (err) {
-    console.log(err);
+    res.status(400).json({ message: err.message, ok: false });
   }
 });
 
@@ -87,7 +91,7 @@ itemRouter.delete("/delete/:itemID", authValidation, async (req, res) => {
   const { itemID } = req.params;
 
   if (!itemID) {
-    return res.send({
+    return res.status(400).json({
       message: "Item Id Is Required",
       ok: false,
     });
@@ -98,7 +102,9 @@ itemRouter.delete("/delete/:itemID", authValidation, async (req, res) => {
 
     let isNotSoonBids = availableBids.some((bid) => bid.status !== "soon");
     if (isNotSoonBids)
-      return res.send({ message: "You Cannot Delete this item", ok: false });
+      return res
+        .status(400)
+        .json({ message: "You Cannot Delete this item", ok: false });
 
     availableBids.forEach(async (bid) => {
       await bidModel.deleteOne({ _id: bid._id });
@@ -109,12 +115,12 @@ itemRouter.delete("/delete/:itemID", authValidation, async (req, res) => {
     });
 
     if (deletedItem.deletedCount > 0)
-      return res.send({
+      return res.status(200).json({
         message: "Item Deleted successfully",
         ok: true,
       });
   } catch (err) {
-    console.log(err);
+    res.status(400).json({ message: err.message, ok: false });
   }
 });
 
@@ -124,7 +130,9 @@ itemRouter.patch("/edit/:itemID", authValidation, async (req, res) => {
   let { images, newImages } = req.body;
 
   if (newImages && images.length === 0)
-    return res.send({ message: "Atleast one image is required", ok: false });
+    return res
+      .status(400)
+      .json({ message: "Atleast one image is required", ok: false });
 
   let item = {
     name: req.body.name,
@@ -135,7 +143,7 @@ itemRouter.patch("/edit/:itemID", authValidation, async (req, res) => {
   try {
     await itemSchema.validateAsync(item);
   } catch (err) {
-    return res.send({
+    return res.status(400).json({
       message: err.details[0].message,
       ok: false,
     });
@@ -169,7 +177,7 @@ itemRouter.patch("/edit/:itemID", authValidation, async (req, res) => {
 
             if (index === images.length - 1) {
               await itemModel.findById(itemID).then((result) => {
-                return res.send({
+                return res.status(200).json({
                   message: "Item Edited Successfully",
                   data: result,
                   ok: true,
@@ -185,7 +193,7 @@ itemRouter.patch("/edit/:itemID", authValidation, async (req, res) => {
         let editedItem = await itemModel.findById(itemID);
 
         if (editedItem)
-          return res.send({
+          return res.status(200).json({
             message: "Item Edited Successfully",
             data: editedItem,
             ok: true,
@@ -193,7 +201,7 @@ itemRouter.patch("/edit/:itemID", authValidation, async (req, res) => {
       }
     }
   } catch (err) {
-    console.log(err);
+    res.status(400).json({ message: err.message, ok: false });
   }
 });
 
@@ -211,9 +219,9 @@ itemRouter.get("/all", authValidation, async (req, res) => {
       .skip(skip)
       .limit(limit);
 
-    res.send({ data: { items, count }, ok: true });
+    res.status(200).json({ data: { items, count }, ok: true });
   } catch (err) {
-    console.log(err);
+    res.status(400).json({ message: err.message, ok: false });
   }
 });
 

@@ -1,4 +1,4 @@
-/** LIBERARIES **/
+/** IMPORTS **/
 const { Router } = require("express");
 const jwt = require("jsonwebtoken");
 const bcrypt = require("bcrypt");
@@ -79,21 +79,27 @@ authRouter.post("/register", async (req, res) => {
     // validation
     let isValid = registerSchema.validate(user);
     if (isValid.error) {
-      return res.send({ message: isValid.error.details[0].message, ok: false });
+      return res
+        .status(400)
+        .json({ message: isValid.error.details[0].message, ok: false });
     }
 
     // check if password dosen't match
     if (user.password !== user.confirmPassword)
-      return res.send({ message: "Passwords Dosen't Match", ok: false });
+      return res
+        .status(400)
+        .json({ message: "Passwords Dosen't Match", ok: false });
 
     // check if user exists
     let isRegistered = await userModel.findOne({ email: user.email });
     if (isRegistered)
-      return res.send({ message: "User Already Exists", ok: false });
+      return res
+        .status(400)
+        .json({ message: "User Already Exists", ok: false });
 
     // hash password using bcrypt
     bcrypt.hash(user.password, 10, async (err, hash) => {
-      if (err) return res.send({ message: err, ok: true });
+      if (err) return res.status(400).json({ message: err.message, ok: true });
       user.password = hash;
 
       // create new user in db
@@ -146,22 +152,21 @@ authRouter.post("/register", async (req, res) => {
 
       request
         .then(() => {
-          return res.send({
+          return res.status(200).json({
             data: { user: thisUser, token },
             message: "User Registered Successfully",
             ok: true,
           });
         })
         .catch((err) => {
-          console.log(err);
-          return res.send({
+          return res.status(400).json({
             message: err,
             ok: false,
           });
         });
     });
   } catch (err) {
-    console.log(err);
+    res.status(400).json({ message: err.message, ok: false });
   }
 });
 
@@ -172,7 +177,7 @@ authRouter.get("/send-verification-link", authValidation, async (req, res) => {
     // check if a token is already created for user email verification
     let existingToken = await tokenModel.findOne({ user: user.id });
     if (existingToken)
-      return res.send({ message: "Link Already Sent", ok: false });
+      return res.status(400).json({ message: "Link Already Sent", ok: false });
 
     // creating an email verification token
     let token = await tokenModel.create({
@@ -209,21 +214,20 @@ authRouter.get("/send-verification-link", authValidation, async (req, res) => {
 
     request
       .then(() => {
-        return res.send({
+        return res.status(200).json({
           message:
             "We've sent you the verification email. Checkout your email and click the link to verify it.",
           ok: true,
         });
       })
       .catch((err) => {
-        console.log(err);
-        return res.send({
-          message: err,
+        return res.status(400).json({
+          message: err.message,
           ok: false,
         });
       });
   } catch (err) {
-    console.log(err);
+    res.status(400).json({ message: err.message, ok: false });
   }
 });
 
@@ -234,7 +238,7 @@ authRouter.patch("/verify-email/:token", async (req, res) => {
     // checking if there is a token
     let existingToken = await tokenModel.findOne({ _id: token });
     if (!existingToken)
-      return res.send({ message: "Token Expired.", ok: false });
+      return res.status(400).json({ message: "Token Expired.", ok: false });
 
     // if a token is found then verify the user email
     let updatedUser = await userModel.updateOne(
@@ -245,10 +249,12 @@ authRouter.patch("/verify-email/:token", async (req, res) => {
     if (updatedUser.modifiedCount > 0) {
       let removedToken = await tokenModel.deleteOne({ _id: token });
       if (removedToken.deletedCount > 0)
-        return res.send({ message: "Email verified successfully.", ok: true });
+        return res
+          .status(200)
+          .json({ message: "Email verified successfully.", ok: true });
     }
   } catch (err) {
-    console.log(err);
+    res.status(400).json({ message: err.message, ok: false });
   }
 });
 
@@ -265,7 +271,9 @@ authRouter.get("/forgot-password", async (req, res) => {
 
     let isValid = emaiSchema.validate({ email });
     if (isValid.error) {
-      return res.send({ message: isValid.error.details[0].message, ok: false });
+      return res
+        .status(400)
+        .json({ message: isValid.error.details[0].message, ok: false });
     }
 
     // checking if a token exists
@@ -275,12 +283,16 @@ authRouter.get("/forgot-password", async (req, res) => {
 
     // if found then sent that it's already sent
     if (existingToken)
-      return res.send({ message: "Token Already Sent.", ok: false });
+      return res
+        .status(400)
+        .json({ message: "Token Already Sent.", ok: false });
 
     // chack if the user is found
     let thisUser = await userModel.findOne({ email });
     if (!thisUser) {
-      return res.send({ message: "User does not exist.", ok: false });
+      return res
+        .status(400)
+        .json({ message: "User does not exist.", ok: false });
     }
 
     // create a forgot password token and save it in db
@@ -314,20 +326,19 @@ authRouter.get("/forgot-password", async (req, res) => {
 
     request
       .then(() => {
-        return res.send({
+        return res.status(200).json({
           message: "Reset Password Link is sent Successfully",
           ok: true,
         });
       })
       .catch((err) => {
-        console.log(err);
-        return res.send({
+        return res.status(400).json({
           message: err,
           ok: false,
         });
       });
   } catch (err) {
-    console.log(err);
+    res.status(400).json({ message: err.message, ok: false });
   }
 });
 
@@ -337,17 +348,19 @@ authRouter.get("/validate-password-token", async (req, res) => {
   try {
     // validating sent token
     if (token.length !== 24)
-      return res.send({ message: "Invalid Token", ok: false });
+      return res.status(400).json({ message: "Invalid Token", ok: false });
 
     // chcking if sent token exists in db
     let existingToken = await tokenModel.findOne({ _id: token });
     if (!existingToken)
-      return res.send({ message: "Invalid Token", ok: false });
+      return res.status(400).json({ message: "Invalid Token", ok: false });
 
     // sending user email back
-    return res.send({ data: { email: existingToken.user }, ok: true });
+    return res
+      .status(200)
+      .json({ data: { email: existingToken.user }, ok: true });
   } catch (err) {
-    console.log(err);
+    res.status(400).json({ message: err.message, ok: false });
   }
 });
 
@@ -368,23 +381,29 @@ authRouter.patch("/reset-password", async (req, res) => {
       confirmPassword,
     });
     if (isValid.error) {
-      return res.send({ message: isValid.error.details[0].message, ok: false });
+      return res
+        .status(400)
+        .json({ message: isValid.error.details[0].message, ok: false });
     }
 
     // check if password === confirmPassword
     if (password !== confirmPassword)
-      return res.send({ message: "Passwords Dosen't Match", ok: false });
+      return res
+        .status(400)
+        .json({ message: "Passwords Dosen't Match", ok: false });
 
     // get user from db
     let thisUser = await userModel.findOne({ email });
 
     // check if user exists
     if (!thisUser)
-      return res.send({ message: "User does not exist", ok: false });
+      return res
+        .status(400)
+        .json({ message: "User does not exist", ok: false });
 
     // hashing new password
     bcrypt.hash(password, 10, async (err, hash) => {
-      if (err) return res.send({ message: err, ok: false });
+      if (err) return res.status(400).json({ message: err.message, ok: false });
       else {
         // saving new hashed password in db
         let updatedUser = await userModel.updateOne(
@@ -395,7 +414,7 @@ authRouter.patch("/reset-password", async (req, res) => {
           // removing password token
           let updatedToken = await tokenModel.deleteOne({ email });
           if (updatedToken.deletedCount > 0) {
-            return res.send({
+            return res.status(200).json({
               message: "password reset succesfully",
               ok: true,
             });
@@ -404,7 +423,7 @@ authRouter.patch("/reset-password", async (req, res) => {
       }
     });
   } catch (err) {
-    console.log(err);
+    res.status(400).json({ message: err.message, ok: false });
   }
 });
 
@@ -418,13 +437,17 @@ authRouter.post("/login", async (req, res) => {
   try {
     let isValid = loginSchema.validate(user);
     if (isValid.error) {
-      return res.send({ message: isValid.error.details[0].message, ok: false });
+      return res
+        .status(400)
+        .json({ message: isValid.error.details[0].message, ok: false });
     }
 
     // checking if a user exists
     let thisUser = await userModel.findOne({ email: user.email });
     if (!thisUser)
-      return res.send({ message: "User Email Not Found", ok: false });
+      return res
+        .status(400)
+        .json({ message: "User Email Not Found", ok: false });
 
     // get banned user
     let xUser = await banModel.findOne({ user: user.email });
@@ -432,7 +455,7 @@ authRouter.post("/login", async (req, res) => {
     // check if user is banned
     if (xUser) {
       if (xUser.days === 0)
-        return res.send({
+        return res.status(400).json({
           message: `Your account has been banned forever you need to contact support`,
           ok: false,
         });
@@ -444,7 +467,7 @@ authRouter.post("/login", async (req, res) => {
       if (duration >= xUser.days) {
         await banModel.deleteOne({ _id: xUser._id });
       } else {
-        return res.send({
+        return res.status(400).json({
           message: `Your account has been banned wait ${
             xUser.days - duration
           } days or contact support`,
@@ -461,15 +484,18 @@ authRouter.post("/login", async (req, res) => {
 
         // creating a user token and logging user in
         let token = await createToken(thisUser);
-        return res.send({
+        return res.status(200).json({
           data: { user: thisUser, token },
           message: "User Logged In Successfully",
           ok: true,
         });
-      } else return res.send({ message: "User Password Incorrect", ok: false });
+      } else
+        return res
+          .status(400)
+          .json({ message: "User Password Incorrect", ok: false });
     });
   } catch (err) {
-    console.log(err);
+    res.status(400).json({ message: err.message, ok: false });
   }
 });
 
@@ -485,21 +511,23 @@ authRouter.patch("/edit-account", authValidation, async (req, res) => {
   try {
     let isValid = editAccount.validate(userData);
     if (isValid.error) {
-      return res.send({ message: isValid.error.details[0].message, ok: false });
+      return res
+        .status(400)
+        .json({ message: isValid.error.details[0].message, ok: false });
     }
 
     let updatedUser = await userModel.updateOne({ _id: user.id }, userData);
     if (updatedUser.modifiedCount > 0) {
       let xUser = await userModel.findOne({ _id: user.id }).select("-password");
-      return res.send({
+      return res.status(200).json({
         data: xUser,
         message: "Profile Updated Successfully",
         ok: true,
       });
     }
-    res.send({ message: "Profile Update Failed", ok: false });
+    res.status(400).json({ message: "Profile Update Failed", ok: false });
   } catch (err) {
-    console.log(err);
+    res.status(400).json({ message: err.message, ok: false });
   }
 });
 
@@ -513,47 +541,9 @@ authRouter.get("/user", authValidation, async (req, res) => {
     userData.password = undefined;
 
     // sending response with user data
-    res.send({ data: userData, ok: true });
+    res.status(200).json({ data: userData, ok: true });
   } catch (err) {
-    console.log(err);
-  }
-});
-
-authRouter.patch("/user-role", authValidation, async (req, res) => {
-  let user = res.locals.user;
-  let email = req.body.email;
-
-  try {
-    // checking if a user is admin
-    if (!user.isAdmin) res.send({ message: "Access Denied", ok: false });
-
-    // checking if a user exists
-    let isRegistered = await userModel.findOne({ email });
-    if (!isRegistered)
-      return res.send({ message: "User Not Found", ok: false });
-
-    // changing user's admin privlages and saving in db
-    let updatedUser = await userModel.updateOne(
-      { email },
-      { isAdmin: !isRegistered.isAdmin }
-    );
-    if (updatedUser.modifiedCount > 0) {
-      let log = await logModel.create({
-        admin: user.email,
-        user: isRegistered.email,
-        message: !isRegistered.isAdmin
-          ? `${user.email} has assigned ${isRegistered.email} as an admin.`
-          : `${user.email} has revoked ${isRegistered.email} from being admin.`,
-      });
-
-      if (log)
-        return res.send({
-          message: "User Role is Changed",
-          ok: true,
-        });
-    }
-  } catch (err) {
-    console.log(err);
+    res.status(400).json({ message: err.message, ok: false });
   }
 });
 
@@ -586,7 +576,7 @@ authRouter.get("/notifications", authValidation, async (req, res) => {
         });
 
         // sending sorted notifications
-        return res.send({
+        return res.status(200).json({
           data: userData.notifications,
           ok: true,
         });
@@ -596,7 +586,7 @@ authRouter.get("/notifications", authValidation, async (req, res) => {
         console.log("Oh! Dark");
       });
   } catch (err) {
-    console.log(err);
+    res.status(400).json({ message: err.message, ok: false });
   }
 });
 
@@ -606,7 +596,10 @@ authRouter.post("/add-profile", authValidation, async (req, res) => {
 
   try {
     // checking if an image exists
-    if (!image) return res.send({ message: "An image is required", ok: false });
+    if (!image)
+      return res
+        .status(400)
+        .json({ message: "An image is required", ok: false });
 
     // uploading image to imagekit
     imagekit
@@ -622,13 +615,13 @@ authRouter.post("/add-profile", authValidation, async (req, res) => {
         );
 
         if (thisUser.modifiedCount > 0)
-          return res.send({
+          return res.status(200).json({
             message: "Profile Image Updated Successfully",
             ok: true,
           });
       });
   } catch (err) {
-    console.log(err);
+    res.status(400).json({ message: err.message, ok: false });
   }
 });
 
@@ -638,11 +631,14 @@ authRouter.delete("/delete-profile", authValidation, async (req, res) => {
 
   try {
     // checking if an image exists
-    if (!image) return res.send({ message: "An image is required", ok: false });
+    if (!image)
+      return res
+        .status(400)
+        .json({ message: "An image is required", ok: false });
 
     // deleting required image
     imagekit.deleteFile(image.fileId, async (err) => {
-      if (err) return res.send({ message: err, ok: false });
+      if (err) return res.status(400).json({ message: err.message, ok: false });
       else {
         // updating user with new image details
         let thisUser = await userModel.updateOne(
@@ -651,14 +647,14 @@ authRouter.delete("/delete-profile", authValidation, async (req, res) => {
         );
 
         if (thisUser.modifiedCount > 0)
-          return res.send({
+          return res.status(200).json({
             message: "Profile Image Removed Successfully",
             ok: true,
           });
       }
     });
   } catch (err) {
-    console.log(err);
+    res.status(400).json({ message: err.message, ok: false });
   }
 });
 

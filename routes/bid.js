@@ -1,12 +1,12 @@
 const dayjs = require("dayjs");
 const express = require("express");
-const JOI = require("joi"); //use joi to easier form
-const { Types } = require("mongoose");
+const JOI = require("joi");
 const analyticsModel = require("../models/analyticsModel");
 const bidModel = require("../models/bidModel"); //import to bidModel
 const orderModel = require("../models/orderModel");
 const { sendNotification } = require("../utils/notification");
 const spawn = require("child_process").spawn;
+const ObjectId = require("mongoose").Types.ObjectId;
 
 const bidRouter = express.Router();
 
@@ -34,7 +34,7 @@ bidRouter.post("/add", authValidation, async (req, res) => {
   try {
     await bidSchema.validateAsync(bid);
   } catch (err) {
-    return res.send({
+    return res.status(400).json({
       message: err.details[0].message,
       ok: false,
     });
@@ -48,19 +48,19 @@ bidRouter.post("/add", authValidation, async (req, res) => {
     let diffEndDays = endDate.diff(now, "d");
 
     if (diffStartDays > diffEndDays)
-      return res.send({
+      return res.status(400).json({
         message: "Start date must be before End date",
         ok: false,
       });
 
     if (diffStartDays > 3 || diffStartDays < 0)
-      return res.send({
+      return res.status(400).json({
         message: "Start date must be between now and three days from now",
         ok: false,
       });
 
     if (diffEndDays > 21 || diffEndDays < 0)
-      return res.send({
+      return res.status(400).json({
         message: "End date must be between start date and 21 days from now",
         ok: false,
       });
@@ -74,10 +74,10 @@ bidRouter.post("/add", authValidation, async (req, res) => {
       changeBidStatus("active", diffStart, newBid._id);
       changeBidStatus("expired", diffEnd, newBid._id);
 
-      return res.send({ data: newBid, ok: true });
+      return res.status(200).json({ data: newBid, ok: true });
     }
   } catch (err) {
-    console.log(err);
+    res.status(400).json({ message: err.message, ok: false });
   }
 });
 
@@ -148,7 +148,7 @@ const changeBidStatus = async (status, diff, bidID) => {
         }
       }
     } catch (err) {
-      console.log(err);
+      res.status(400).json({ message: err.message, ok: false });
     }
   }, diff);
 };
@@ -206,7 +206,7 @@ const reviveServer = async () => {
 
     console.log("Server Successfully Restored");
   } catch (err) {
-    console.log(err);
+    res.status(400).json({ message: err.message, ok: false });
   }
 };
 
@@ -215,19 +215,15 @@ bidRouter.delete("/delete/:bidID", authValidation, async (req, res) => {
   let user = res.locals.user;
   let { bidID } = req.params;
 
-  if (!bidID) {
-    return res.send({
-      message: "bid Id is required",
-      ok: false,
-    });
-  }
+  if (!ObjectId.isValid(bidID))
+    return res.status(404).json({ message: "Incorrect bid id", ok: false });
 
   try {
     let bid = await bidModel.findById(bidID).select("user status");
 
     if (JSON.stringify(user.id) !== JSON.stringify(bid.user))
-      return res.send({
-        message: "Access Denied!",
+      return res.status(401).json({
+        message: "Unauthorized",
         ok: true,
       });
 
@@ -236,24 +232,24 @@ bidRouter.delete("/delete/:bidID", authValidation, async (req, res) => {
         _id: bidID,
       });
 
-      return res.send({
+      return res.status(200).json({
         message: "Bid Deleted successfully",
         ok: true,
       });
     } else if (bid.status === "active") {
       await bidModel.updateOne({ _id: bidID }, { status: "canceled" });
-      return res.send({
+      return res.status(200).json({
         message: "Bid Canceled successfully",
         ok: true,
       });
     } else {
-      return res.send({
+      return res.status(400).json({
         message: "Bid Already " + bid.status,
         ok: true,
       });
     }
   } catch (err) {
-    console.log(err);
+    res.status(400).json({ message: err.message, ok: false });
   }
 });
 
@@ -280,9 +276,9 @@ bidRouter.get("/recommended", authValidation, async (req, res) => {
         .limit(4)
         .populate("item");
 
-      return res.send({ data: recommendedBids, ok: true });
+      return res.status(200).json({ data: recommendedBids, ok: true });
     } else {
-      return res.send({ message: "No Data Found", ok: false });
+      return res.status(400).json({ message: "No Data Found", ok: false });
     }
   });
 
@@ -311,9 +307,9 @@ bidRouter.get("/similar/:bidID", async (req, res) => {
       let similarBids = await bidModel
         .find({ _id: { $in: bidIds } })
         .populate("item");
-      return res.send({ data: similarBids, ok: true });
+      return es.status(200).json({ data: similarBids, ok: true });
     } else {
-      return res.send({ message: "No Data Found", ok: false });
+      return es.status(400).json({ message: "No Data Found", ok: false });
     }
   });
 });
@@ -331,7 +327,7 @@ bidRouter.get("/recently", authValidation, async (req, res) => {
     let recentBids = [];
 
     anx.forEach((item) => {
-      recentBids.push(Types.ObjectId(item.bidID));
+      recentBids.push(ObjectId(item.bidID));
     });
 
     let bids = await bidModel
@@ -342,18 +338,15 @@ bidRouter.get("/recently", authValidation, async (req, res) => {
       })
       .populate("item", "name type images");
 
-    res.send({ data: bids, ok: true });
+    res.status(200).json({ data: bids, ok: true });
   } catch (err) {
-    console.log(err);
+    res.status(400).json({ message: err.message, ok: false });
   }
 });
 
 //view all bids
 bidRouter.get("/all", async (req, res) => {
-  let limit = req.query.limit || 0;
-  let skip = req.query.skip || 0;
-  let sortBy = req.query.sortBy || "endDate";
-  let dir = req.query.dir || -1;
+  let { limit = 0, skip = 0, sortBy = "endDate", dir = -1 } = req.query;
 
   try {
     let count = await bidModel.count();
@@ -366,17 +359,16 @@ bidRouter.get("/all", async (req, res) => {
       .populate("item", "name type description images")
       .populate("user", "name email profilePicture");
 
-    res.send({ data: { count, bids }, ok: true });
+    res.status(200).json({ data: { count, bids }, ok: true });
   } catch (err) {
-    console.log(err);
+    res.status(400).json({ message: err.message, ok: false });
   }
 });
 
 //view all bids for special user
 bidRouter.get("/sales", authValidation, async (req, res) => {
-  let user = res.locals.user;
-  let limit = req.query.limit || 0;
-  let skip = req.query.skip || 0;
+  let { user } = res.locals;
+  let { limit = 0, skip = 0 } = req.query;
 
   try {
     let count = await bidModel.count({ user: user.id });
@@ -388,16 +380,15 @@ bidRouter.get("/sales", authValidation, async (req, res) => {
       .populate("item", "name type description images")
       .populate("user", "name email profilePicture");
 
-    res.send({ data: { bids, count }, ok: true });
+    res.status(200).json({ data: { bids, count }, ok: true });
   } catch (err) {
-    console.log(err);
+    res.status(400).json({ message: err.message, ok: false });
   }
 });
 
 bidRouter.get("/purchases", authValidation, async (req, res) => {
   let user = res.locals.user;
-  let limit = req.query.limit || 0;
-  let skip = req.query.skip || 0;
+  let { limit = 0, skip = 0 } = req.query;
 
   try {
     let count = await bidModel.count({ "bidsHistory.user": user.id });
@@ -409,16 +400,15 @@ bidRouter.get("/purchases", authValidation, async (req, res) => {
       .populate("item", "name type description images")
       .populate("user", "name email profilePicture");
 
-    res.send({ data: { bids, count }, ok: true });
+    res.status(200).json({ data: { bids, count }, ok: true });
   } catch (err) {
-    console.log(err);
+    res.status(400).json({ message: err.message, ok: false });
   }
 });
 
 bidRouter.get("/category/:cat", async (req, res) => {
   const { cat } = req.params;
-  let limit = req.query.limit || 0;
-  let skip = req.query.skip || 0;
+  let { limit = 0, skip = 0 } = req.query;
 
   try {
     let filteredBids = [];
@@ -444,14 +434,14 @@ bidRouter.get("/category/:cat", async (req, res) => {
           parseInt(skip) + parseInt(limit)
         );
 
-        return res.send({
+        return res.status(200).json({
           data: { bids: paginatedBids, count: bidCount },
           ok: true,
         });
       }
     });
   } catch (err) {
-    console.log(err);
+    res.status(400).json({ message: err.message, ok: false });
   }
 });
 
@@ -496,10 +486,10 @@ bidRouter.get("/search/:s", async (req, res) => {
       }
 
       if (index === bids.length - 1)
-        return res.send({ data: filteredBids, ok: true });
+        return es.status(200).json({ data: filteredBids, ok: true });
     });
   } catch (err) {
-    console.log(err);
+    res.status(400).json({ message: err.message, ok: false });
   }
 });
 
