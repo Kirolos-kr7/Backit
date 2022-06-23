@@ -105,7 +105,7 @@ adminRouter.get("/bids", authValidation, isAdmin, async (req, res) => {
 
   try {
     if (s) {
-      if (ObjectId.isValid(s))
+      if (ObjectId.isValid(s)) {
         query = {
           $or: [
             { _id: ObjectId(s) },
@@ -113,7 +113,11 @@ adminRouter.get("/bids", authValidation, isAdmin, async (req, res) => {
             { user: ObjectId(s) },
           ],
         };
-      else query = { $text: { $search: s } };
+      } else {
+        let userID = await emailToUserID(s);
+        if (userID) query = { user: userID };
+        else query = { $text: { $search: s } };
+      }
     }
 
     let count = await bidModel.count(query);
@@ -129,6 +133,7 @@ adminRouter.get("/bids", authValidation, isAdmin, async (req, res) => {
 
     res.status(200).json({ data: { bids, count }, ok: true });
   } catch (err) {
+    console.log(err);
     res.status(400).json({ message: err.message, ok: false });
   }
 });
@@ -499,6 +504,15 @@ adminRouter.get("/logs", authValidation, isAdmin, async (req, res) => {
 const banUser = async ({ email, message, days = 0 }) => {
   let xUser = await banModel.create({ user: email, message, days });
   if (xUser) return 1;
+};
+
+const emailToUserID = async (s) => {
+  const E_REGEX = /\S+@\S+\.\S+/;
+  if (E_REGEX.test(s)) {
+    let user = await userModel.findOne({ email: s }).select("_id");
+    if (user) return user._id;
+  }
+  return s;
 };
 
 // export admin router
