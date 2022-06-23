@@ -38,6 +38,26 @@ adminRouter.get("/users", authValidation, isAdmin, async (req, res) => {
   }
 });
 
+adminRouter.get(
+  "/user/info/:email",
+  authValidation,
+  isAdmin,
+  async (req, res) => {
+    let { email } = req.params;
+
+    try {
+      console.log(email);
+      let user = await userModel
+        .findOne({ email })
+        .select("name email isAdmin gender phone address createdAt");
+
+      res.status(200).json({ data: user, ok: true });
+    } catch (err) {
+      res.status(400).json({ message: err.message, ok: false });
+    }
+  }
+);
+
 adminRouter.patch("/user-role", authValidation, isAdmin, async (req, res) => {
   let user = res.locals.user;
   let email = req.body.email;
@@ -87,7 +107,7 @@ adminRouter.delete(
       await logModel.create({
         admin: user.email,
         user: email,
-        message: `${user.email} has applied a ${message} for ${email}`,
+        message: `${user.email} has banned ${email}`,
       });
 
       res.status(200).json({ message: "User Banned Successfully", ok: true });
@@ -104,19 +124,22 @@ adminRouter.get("/bids", authValidation, isAdmin, async (req, res) => {
   let query = {};
 
   try {
-    if (s) {
-      if (ObjectId.isValid(s)) {
-        query = {
-          $or: [
-            { _id: ObjectId(s) },
-            { item: ObjectId(s) },
-            { user: ObjectId(s) },
-          ],
-        };
-      } else {
-        let userID = await emailToUserID(s);
-        if (userID) query = { user: userID };
-        else query = { $text: { $search: s } };
+    if (!isNaN(parseInt(s))) query = { minPrice: parseInt(s) };
+    else {
+      if (s) {
+        if (ObjectId.isValid(s)) {
+          query = {
+            $or: [
+              { _id: ObjectId(s) },
+              { item: ObjectId(s) },
+              { user: ObjectId(s) },
+            ],
+          };
+        } else {
+          let userID = await emailToUserID(s);
+          if (userID) query = { user: userID };
+          else query = { $text: { $search: s } };
+        }
       }
     }
 
@@ -283,20 +306,16 @@ adminRouter.get("/reports", authValidation, isAdmin, async (req, res) => {
 });
 
 adminRouter.patch(
-  "/feedback/:reportID",
+  "/report/feedback/:reportID",
   authValidation,
   isAdmin,
   async (req, res) => {
-    let user = res.locals.user;
+    let { user } = res.locals;
     const { reportID } = req.params;
     const { status, action, recipient, message, bidID } = req.body;
 
-    if (!reportID) {
-      return res.status(400).json({
-        message: "ReportID is Required",
-        ok: false,
-      });
-    }
+    if (!ObjectId.isValid(reportID))
+      return res.status(404).json({ message: "Report Not Found", ok: false });
 
     if (!status) {
       return res.status(400).json({
