@@ -307,9 +307,9 @@ bidRouter.get("/similar/:bidID", async (req, res) => {
       let similarBids = await bidModel
         .find({ _id: { $in: bidIds } })
         .populate("item");
-      return es.status(200).json({ data: similarBids, ok: true });
+      return res.status(200).json({ data: similarBids, ok: true });
     } else {
-      return es.status(400).json({ message: "No Data Found", ok: false });
+      return res.status(400).json({ message: "No Data Found", ok: false });
     }
   });
 });
@@ -486,7 +486,7 @@ bidRouter.get("/search/:s", async (req, res) => {
       }
 
       if (index === bids.length - 1)
-        return es.status(200).json({ data: filteredBids, ok: true });
+        return res.status(200).json({ data: filteredBids, ok: true });
     });
   } catch (err) {
     res.status(400).json({ message: err.message, ok: false });
