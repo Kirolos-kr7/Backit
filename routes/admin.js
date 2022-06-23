@@ -93,7 +93,7 @@ adminRouter.delete(
       res.status(200).json({ message: "User Banned Successfully", ok: true });
     } catch (err) {
       if (err.code === 11000)
-        res.status(400).json({ message: "User Already Banned", ok: false });
+        res.status(200).json({ message: "User Already Banned", ok: false });
       else res.status(400).json({ message: err.message, ok: false });
     }
   }
@@ -142,6 +142,9 @@ adminRouter.delete("/bid/:bidID", authValidation, async (req, res) => {
   let { bidID } = req.params;
 
   try {
+    if (ObjectId.isValid(bidID))
+      return res.status(404).json({ message: "Bid Not Found", ok: false });
+
     let deletedBid = await bidModel.deleteOne({ _id: bidID });
 
     if (deletedBid.deletedCount > 0)
@@ -203,6 +206,9 @@ adminRouter.delete(
     let { orderID } = req.params;
 
     try {
+      if (ObjectId.isValid(banID))
+        return res.status(404).json({ message: "Order Not Found", ok: false });
+
       let deletedOrder = await orderModel.deleteOne({ _id: orderID });
 
       if (deletedOrder.deletedCount > 0) {
@@ -344,31 +350,36 @@ adminRouter.patch(
   }
 );
 
-adminRouter.delete("/delete", authValidation, isAdmin, async (req, res) => {
-  const reportID = req.body.reportID;
+adminRouter.delete(
+  "/order/delete/:orderID",
+  authValidation,
+  isAdmin,
+  async (req, res) => {
+    const { reportID } = req.params;
 
-  if (!reportID) {
-    return res.status(400).json({
-      message: "report Id Is Required",
-      ok: false,
-    });
-  }
-
-  try {
-    let deletedreport = await reportModel.deleteOne({
-      _id: reportID,
-    });
-
-    if (deletedreport.deletedCount > 0) {
-      return res.status(200).json({
-        message: "report Deleted successfully",
-        ok: true,
+    if (!reportID) {
+      return res.status(400).json({
+        message: "report Id Is Required",
+        ok: false,
       });
     }
-  } catch (err) {
-    res.status(400).json({ message: err.message, ok: false });
+
+    try {
+      let deletedreport = await reportModel.deleteOne({
+        _id: reportID,
+      });
+
+      if (deletedreport.deletedCount > 0) {
+        return res.status(200).json({
+          message: "report Deleted successfully",
+          ok: true,
+        });
+      }
+    } catch (err) {
+      res.status(400).json({ message: err.message, ok: false });
+    }
   }
-});
+);
 
 adminRouter.get("/notifications", authValidation, isAdmin, async (req, res) => {
   let { limit = 0, skip = 0 } = req.query;
@@ -429,7 +440,7 @@ adminRouter.post("/broadcast", authValidation, isAdmin, async (req, res) => {
     let isValid = ntSchema.validate({ title, message, redirect });
     if (isValid.error)
       return res
-        .status(200)
+        .status(400)
         .json({ message: isValid.error.details[0].message, ok: false });
 
     // getting all user
@@ -514,6 +525,61 @@ const emailToUserID = async (s) => {
   }
   return s;
 };
+
+adminRouter.get("/bannedusers", authValidation, isAdmin, async (req, res) => {
+  let { sortBy = "name", dir = "asc", limit = 0, skip = 0, s } = req.query;
+  let query = {};
+
+  try {
+    if (s) {
+      if (ObjectId.isValid(s)) query = { _id: ObjectId(s) };
+      else query = { $text: { $search: s } };
+    }
+
+    let count = await banModel.count(query);
+
+    let bannedUsers = await banModel
+      .find(query)
+      .sort([[sortBy, dir]])
+      .limit(limit)
+      .skip(skip);
+
+    res.status(200).json({ data: { bannedUsers, count }, ok: true });
+  } catch (err) {
+    res.status(400).json({ message: err.message, ok: false });
+  }
+});
+
+adminRouter.delete(
+  "/unbanuser/:banID",
+  authValidation,
+  isAdmin,
+  async (req, res) => {
+    let { user } = res.locals;
+    let { banID } = req.params;
+
+    try {
+      if (!ObjectId.isValid(banID))
+        return res.status(404).json({ message: "Ban Not Found", ok: false });
+
+      let unBannedUser = await banModel.findByIdAndDelete(banID);
+
+      await logModel.create({
+        admin: user.email,
+        user: unBannedUser.user,
+        message: `${user.email} has unbanned ${unBannedUser.user}`,
+      });
+
+      if (unBannedUser.deletedCount > 0) {
+        res.status(200).json({ message: "Unbanned Successfully", ok: true });
+      } else {
+        res.status(400).json({ message: "Unbanned Failed", ok: true });
+      }
+    } catch (err) {
+      res.status(400).json({ message: err.message, ok: false });
+    }
+  }
+);
 
 // export admin router
 module.exports = adminRouter;
