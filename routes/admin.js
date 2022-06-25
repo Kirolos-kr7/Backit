@@ -161,18 +161,34 @@ adminRouter.get("/bids", authValidation, isAdmin, async (req, res) => {
   }
 });
 
-adminRouter.delete("/bid/:bidID", authValidation, async (req, res) => {
+adminRouter.delete("/bid/:bidID", authValidation, isAdmin, async (req, res) => {
+  let { user } = res.locals;
   let { bidID } = req.params;
 
   try {
     if (!ObjectId.isValid(bidID))
       return res.status(404).json({ message: "Bid Not Found", ok: false });
 
-    let deletedBid = await bidModel.deleteOne({ _id: bidID });
+    let deletedBid = await bidModel
+      .findOneAndDelete({ _id: bidID })
+      .select("user")
+      .populate({
+        path: "user",
+        select: "email",
+      });
 
-    if (deletedBid.deletedCount > 0)
+    if (deletedBid)
       res.status(200).json({ message: "Bid Removed Successfully", ok: true });
     else res.status(400).json({ message: "Bid Removal Failed", ok: false });
+
+    let from = user.email;
+    let to = deletedBid.user.email.toString();
+
+    await logModel.create({
+      admin: from,
+      user: to,
+      message: `${from} has deleted bid ${deletedBid._id} for ${to}`,
+    });
   } catch (err) {
     res.status(400).json({ message: err.message, ok: false });
   }
