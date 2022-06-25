@@ -536,9 +536,9 @@ authRouter.get("/user", authValidation, async (req, res) => {
 
   try {
     // getting user data
-    let userData = await userModel.findById({ _id: user.id });
-    // removing hashed password
-    userData.password = undefined;
+    let userData = await userModel
+      .findById({ _id: user.id })
+      .select("-password");
 
     // sending response with user data
     res.status(200).json({ data: userData, ok: true });

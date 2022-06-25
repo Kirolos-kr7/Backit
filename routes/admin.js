@@ -165,7 +165,7 @@ adminRouter.delete("/bid/:bidID", authValidation, async (req, res) => {
   let { bidID } = req.params;
 
   try {
-    if (ObjectId.isValid(bidID))
+    if (!ObjectId.isValid(bidID))
       return res.status(404).json({ message: "Bid Not Found", ok: false });
 
     let deletedBid = await bidModel.deleteOne({ _id: bidID });
@@ -229,7 +229,7 @@ adminRouter.delete(
     let { orderID } = req.params;
 
     try {
-      if (ObjectId.isValid(banID))
+      if (!ObjectId.isValid(orderID))
         return res.status(404).json({ message: "Order Not Found", ok: false });
 
       let deletedOrder = await orderModel.deleteOne({ _id: orderID });

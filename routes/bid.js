@@ -129,7 +129,7 @@ const changeBidStatus = async (status, diff, bidID) => {
                 ar: "اذهب لتفعيل الطلب الخاص بك",
                 en: "Go activate your order",
               },
-              redirect: `/orders/${newOrder._id}`,
+              redirect: `/account/order/${newOrder._id}`,
             });
           }
         } else {
