@@ -1,16 +1,14 @@
 const bidModel = require("../models/bidModel");
-const dayjs = require("dayjs");
 const { sendNotification } = require("./notification");
 const analyticsModel = require("../models/analyticsModel");
+const ObjectId = require("mongoose").Types.ObjectId;
 
 const initSocket = (socket) => {
-  console.log("a user connected");
-
   socket.on("pageLoaded", async (bidID, bidderID) => {
     try {
       socket.join(bidID);
 
-      if (bidID.length !== 24) return socket.emit("bidNotFound");
+      if (!ObjectId.isValid(bidID)) return socket.emit("bidNotFound");
 
       let bid = await bidModel
         .findById(bidID)
