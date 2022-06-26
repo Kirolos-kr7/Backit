@@ -10,7 +10,7 @@ const { v1: uuid } = require("uuid");
 const userModel = require("../models/userModel");
 const tokenModel = require("../models/tokenModel");
 const ImageKit = require("imagekit");
-const logModel = require("../models/logModel");
+const ObjectId = require("mongoose").Types.ObjectId;
 const banModel = require("../models/banModel");
 const dayjs = require("dayjs");
 
@@ -347,8 +347,8 @@ authRouter.get("/validate-password-token", async (req, res) => {
 
   try {
     // validating sent token
-    if (token.length !== 24)
-      return res.status(400).json({ message: "Invalid Token", ok: false });
+    if (!ObjectId.isValid(bidID))
+      res.status(404).json({ message: "Token not found", ok: false });
 
     // chcking if sent token exists in db
     let existingToken = await tokenModel.findOne({ _id: token });
@@ -368,12 +368,6 @@ authRouter.patch("/reset-password", async (req, res) => {
   let { email, password, confirmPassword } = req.body;
 
   try {
-    // findOne user from db using email
-    // check if a user is found
-    // check if password === confirmPassword
-    // use bcrypt to hash new password
-    // update user with hashed password
-
     // validating email and password, confirmPassword
     let isValid = resetPasswordSchema.validate({
       email,
