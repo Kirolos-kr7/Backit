@@ -6,6 +6,7 @@ const reportModel = require("../models/reportModel");
 const orderModel = require("../models/orderModel");
 const logModel = require("../models/logModel");
 const banModel = require("../models/banModel");
+const { sendNotification } = require("../utils/notification");
 const JOI = require("joi");
 const isAdmin = require("../middlewares/isAdmin");
 const ObjectId = require("mongoose").Types.ObjectId;
@@ -46,7 +47,6 @@ adminRouter.get(
     let { email } = req.params;
 
     try {
-      console.log(email);
       let user = await userModel
         .findOne({ email })
         .select("name email isAdmin gender phone address createdAt");
@@ -124,22 +124,26 @@ adminRouter.get("/bids", authValidation, isAdmin, async (req, res) => {
   let query = {};
 
   try {
-    if (!isNaN(parseInt(s))) query = { minPrice: parseInt(s) };
-    else {
-      if (s) {
-        if (ObjectId.isValid(s)) {
-          query = {
-            $or: [
-              { _id: ObjectId(s) },
-              { item: ObjectId(s) },
-              { user: ObjectId(s) },
-            ],
-          };
-        } else {
-          let userID = await emailToUserID(s);
-          if (userID) query = { user: userID };
-          else query = { $text: { $search: s } };
-        }
+    if (s) {
+      if (ObjectId.isValid(s))
+        query = {
+          $or: [
+            { _id: ObjectId(s) },
+            { item: ObjectId(s) },
+            { user: ObjectId(s) },
+          ],
+        };
+      else if (!isNaN(parseInt(s))) query = { minPrice: parseInt(s) };
+      else {
+        let email = JOI.string()
+          .email({ minDomainSegments: 2, tlds: { allow: false } })
+          .required();
+
+        let isValid = email.validate(s);
+        if (!isValid.error) {
+          let user = await userModel.findOne({ email: s }).select("_id");
+          query = { user: user._id };
+        } else query = { $text: { $search: s } };
       }
     }
 
@@ -156,7 +160,6 @@ adminRouter.get("/bids", authValidation, isAdmin, async (req, res) => {
 
     res.status(200).json({ data: { bids, count }, ok: true });
   } catch (err) {
-    console.log(err);
     res.status(400).json({ message: err.message, ok: false });
   }
 });
@@ -236,6 +239,127 @@ adminRouter.get("/orders", authValidation, isAdmin, async (req, res) => {
     res.status(400).json({ message: err.message, ok: false });
   }
 });
+
+adminRouter.patch(
+  "/retract/:orderID",
+  authValidation,
+  isAdmin,
+  async (req, res) => {
+    let { user } = res.locals;
+    let { orderID } = req.params;
+
+    try {
+      if (!ObjectId.isValid(orderID))
+        return res.status(404).json({ message: "Order Not Found", ok: false });
+
+      let order = await orderModel.findById(orderID).populate("bid");
+
+      if (order.status !== "pending")
+        return res
+          .status(400)
+          .json({ message: "Order Cannot be canceled", ok: false });
+
+      await orderModel.updateOne({ _id: orderID }, { status: "canceled" });
+
+      sendNotification({
+        userID: order.bidder,
+        title: {
+          ar: "تم الغاء الطلب بنجاح",
+          en: "Order Canceled Successfully",
+        },
+        message: {
+          ar: "لقد قام الادمن بالغاء طلبك.",
+          en: "Admin has canceled your order.",
+        },
+        redirect: `/account/order/${order._id}`,
+      });
+
+      await logModel.create({
+        admin: user.email,
+        user: order.bidder,
+        message: `${user.email} has canceled order ${order._id} for ${order.bidder}`,
+      });
+
+      res
+        .status(200)
+        .json({ message: "Order Canceled Successfully", ok: true });
+
+      let nextBid = {};
+      let bidsHistory = order.bid.bidsHistory.reverse();
+
+      let canceledOrdersForCurrentBid = await orderModel
+        .find({
+          bid: order.bid,
+          status: "canceled",
+        })
+        .select("bidder price");
+
+      let rejectedUsers = canceledOrdersForCurrentBid.map((order) =>
+        order.bidder.toString()
+      );
+
+      let eligableUsers = bidsHistory.filter(
+        (bid) => !rejectedUsers.includes(bid.user)
+      );
+
+      nextBid = eligableUsers[0];
+
+      if (!nextBid) {
+        sendNotification({
+          userID: order.auctioneer,
+          title: {
+            ar: "للأسف. تم الغاء الطلب عن طريق المزايد.",
+            en: "Oops. order was canceled by bidder.",
+          },
+          message: {
+            ar: "للأسف. المزايد الغى الطلب ولم نتمكن من ايجاد بديل. يمكنك بدء المزاد من جديد.",
+            en: "Oops. bidder canceled the order and we didn't find a replacement. You can repost the bid again.",
+          },
+        });
+        return;
+      }
+
+      let nextOrder = {
+        bid: order.bid,
+        auctioneer: order.auctioneer,
+        bidder: nextBid.user,
+        price: nextBid.price,
+        pickupTime: dayjs().add(2, "d"),
+        pickupAddress: order.pickupAddress,
+      };
+
+      let newOrder = await orderModel.create(nextOrder);
+
+      sendNotification({
+        userID: order.auctioneer,
+        title: {
+          ar: "المزايد الغى الطلب ولكننا وجدنا بديل",
+          en: "The bidder canceled the order but we found a replacement",
+        },
+        message: {
+          ar: "المزايد الغى الطلب ولكننا تمكننا من ايجاد بديل. تفقد الطلب الجديد.",
+          en: "The bidder canceled the order but we managed to find a replacement. checkit out.",
+        },
+        redirect: `/account/order/${newOrder._id}`,
+      });
+
+      await sendNotification({
+        userID: nextBid.user,
+        title: {
+          ar: "مبروك. لقد ربحت المزاد",
+          en: "You just won the bid!",
+        },
+        message: {
+          ar: "اذهب لتفعيل الطلب الخاص بك",
+          en: "Go activate your order",
+        },
+        redirect: `/account/order/${newOrder._id}`,
+      });
+    } catch (err) {
+      res.status(400).json({ message: err.message, ok: false });
+    }
+  }
+);
 
 adminRouter.delete(
   "/order/:orderID",
@@ -550,15 +674,6 @@ adminRouter.get("/logs", authValidation, isAdmin, async (req, res) => {
 const banUser = async ({ email, message, days = 0 }) => {
   let xUser = await banModel.create({ user: email, message, days });
   if (xUser) return 1;
-};
-
-const emailToUserID = async (s) => {
-  const E_REGEX = /\S+@\S+\.\S+/;
-  if (E_REGEX.test(s)) {
-    let user = await userModel.findOne({ email: s }).select("_id");
-    if (user) return user._id;
-  }
-  return s;
 };
 
 adminRouter.get("/bannedusers", authValidation, isAdmin, async (req, res) => {
