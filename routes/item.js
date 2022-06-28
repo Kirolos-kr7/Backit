@@ -19,9 +19,9 @@ const itemRouter = express.Router();
 
 //identify the requests of every thing
 const itemSchema = JOI.object({
-  name: JOI.string().min(3).max(64).required(),
+  name: JOI.string().min(3).max(128).required(),
   type: JOI.string().min(3).max(32).required(),
-  description: JOI.string().min(3).max(256).required(),
+  description: JOI.string().min(3).max(512).required(),
   images: JOI.array(),
   uID: JOI.string(),
 });
