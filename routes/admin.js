@@ -9,6 +9,7 @@ const banModel = require("../models/banModel");
 const { sendNotification } = require("../utils/notification");
 const JOI = require("joi");
 const isAdmin = require("../middlewares/isAdmin");
+const dayjs = require("dayjs");
 const ObjectId = require("mongoose").Types.ObjectId;
 
 // create admin router
@@ -274,15 +275,15 @@ adminRouter.patch(
         redirect: `/account/order/${order._id}`,
       });
 
+      res
+        .status(200)
+        .json({ message: "Order Canceled Successfully", ok: true });
+
       await logModel.create({
         admin: user.email,
         user: order.bidder,
         message: `${user.email} has canceled order ${order._id} for ${order.bidder}`,
       });
-
-      res
-        .status(200)
-        .json({ message: "Order Canceled Successfully", ok: true });
 
       let nextBid = {};
       let bidsHistory = order.bid.bidsHistory.reverse();
@@ -301,7 +302,6 @@ adminRouter.patch(
       let eligableUsers = bidsHistory.filter(
         (bid) => !rejectedUsers.includes(bid.user)
       );
-
       nextBid = eligableUsers[0];
 
       if (!nextBid) {
@@ -327,6 +327,8 @@ adminRouter.patch(
         pickupTime: dayjs().add(2, "d"),
         pickupAddress: order.pickupAddress,
       };
+
+      console.log(nextOrder);
 
       let newOrder = await orderModel.create(nextOrder);
 
