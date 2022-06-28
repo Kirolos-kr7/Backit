@@ -283,7 +283,7 @@ bidRouter.get("/recommended", authValidation, async (req, res) => {
   });
 
   pythonProcess.stderr.on("data", (err) => {
-    return res.status(400).json({ message: err, ok: false });
+    console.log(err);
   });
 });
 
