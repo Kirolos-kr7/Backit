@@ -275,10 +275,6 @@ adminRouter.patch(
         redirect: `/account/order/${order._id}`,
       });
 
-      res
-        .status(200)
-        .json({ message: "Order Canceled Successfully", ok: true });
-
       await logModel.create({
         admin: user.email,
         user: order.bidder,
@@ -357,6 +353,10 @@ adminRouter.patch(
         },
         redirect: `/account/order/${newOrder._id}`,
       });
+
+      res
+        .status(200)
+        .json({ message: "Order Canceled Successfully", ok: true });
     } catch (err) {
       res.status(400).json({ message: err.message, ok: false });
     }
