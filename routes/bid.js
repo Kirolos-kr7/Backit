@@ -290,6 +290,9 @@ bidRouter.get("/recommended", authValidation, async (req, res) => {
 bidRouter.get("/similar/:bidID", async (req, res) => {
   let { bidID } = req.params;
 
+  if (!ObjectId.isValid(bidID))
+    return res.status(404).json({ message: "Bid Not Found", ok: false });
+
   let analytics = await analyticsModel.find().select({ _id: 0 });
   let jsonAnalytics = JSON.stringify(analytics);
 
