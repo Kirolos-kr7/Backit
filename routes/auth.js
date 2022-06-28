@@ -347,7 +347,7 @@ authRouter.get("/validate-password-token", async (req, res) => {
 
   try {
     // validating sent token
-    if (!ObjectId.isValid(bidID))
+    if (!ObjectId.isValid(token))
       res.status(404).json({ message: "Token not found", ok: false });
 
     // chcking if sent token exists in db
