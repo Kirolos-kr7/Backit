@@ -12,7 +12,7 @@ const sendNotification = async ({ userID, title, message, redirect }) => {
 
     await user.save();
   } catch (err) {
-    console.log(err);
+    return res.status(400).json({ message: err.message, ok: false });
   }
 };
 

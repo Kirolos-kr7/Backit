@@ -163,7 +163,6 @@ orderRouter.patch("/retract/:orderID", authValidation, async (req, res) => {
     );
 
     nextBid = eligableUsers[0];
-    console.log(nextBid);
 
     if (!nextBid) {
       sendNotification({

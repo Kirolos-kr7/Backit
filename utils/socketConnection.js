@@ -25,7 +25,7 @@ const initSocket = (socket) => {
         await analyticsModel.create({ bidID, bidderID });
       }
     } catch (err) {
-      console.log(err);
+      socket.emit("bidError", err);
     }
   });
 
@@ -70,7 +70,7 @@ const initSocket = (socket) => {
         }
       }
     } catch (err) {
-      console.log(err);
+      socket.emit("bidError", err);
     }
   });
 };
@@ -97,7 +97,7 @@ const fetchBid = async (bidID, socket) => {
       socket.emit("bidFound", bid);
     }
   } catch (err) {
-    console.log(err);
+    socket.emit("bidError", err);
   }
 };
 

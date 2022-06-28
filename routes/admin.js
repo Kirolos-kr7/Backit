@@ -324,8 +324,6 @@ adminRouter.patch(
         pickupAddress: order.pickupAddress,
       };
 
-      console.log(nextOrder);
-
       let newOrder = await orderModel.create(nextOrder);
 
       sendNotification({

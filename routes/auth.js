@@ -553,7 +553,6 @@ authRouter.get("/notifications", authValidation, async (req, res) => {
         });
         doc.save();
       })
-
       .then(async () => {
         let userData = await userModel
           .findById(user.id)
@@ -575,9 +574,8 @@ authRouter.get("/notifications", authValidation, async (req, res) => {
           ok: true,
         });
       })
-
       .catch((err) => {
-        console.log("Oh! Dark");
+        res.status(400).json({ message: err.message, ok: false });
       });
   } catch (err) {
     res.status(400).json({ message: err.message, ok: false });

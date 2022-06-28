@@ -282,8 +282,8 @@ bidRouter.get("/recommended", authValidation, async (req, res) => {
     }
   });
 
-  pythonProcess.stderr.on("data", (data) => {
-    console.log(data.toString());
+  pythonProcess.stderr.on("data", (err) => {
+    res.status(400).json({ message: err, ok: false });
   });
 });
 
