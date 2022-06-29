@@ -255,9 +255,15 @@ bidRouter.delete("/delete/:bidID", authValidation, async (req, res) => {
 
 bidRouter.get("/recommended", authValidation, async (req, res) => {
   let { user } = res.locals;
+  let jsonAnalytics = null;
 
-  let analytics = await analyticsModel.find().select({ _id: 0 });
-  let jsonAnalytics = JSON.stringify(analytics);
+  try {
+    let analytics = await analyticsModel.find().select({ _id: 0 });
+    jsonAnalytics = JSON.stringify(analytics);
+  } catch (err) {
+    console.log(err);
+    return res.status(400).json({ message: err.message, ok: false });
+  }
 
   const pythonProcess = spawn("python", [
     "./recommendation_engine/you_might_like.py",
@@ -266,19 +272,23 @@ bidRouter.get("/recommended", authValidation, async (req, res) => {
   ]);
 
   pythonProcess.stdout.on("data", async (data) => {
-    let result = data.toString().trim();
-
-    if (result != "N/F") {
+    try {
+      let result = data.toString().trim();
       let bidIds = result.split(" ");
 
-      let recommendedBids = await bidModel
-        .find({ _id: { $in: bidIds }, user: { $ne: user.id } })
-        .limit(4)
-        .populate("item");
+      if (result != "N/F" && bidIds.length > 0) {
+        let recommendedBids = await bidModel
+          .find({ _id: { $in: bidIds }, user: { $ne: user.id } })
+          .limit(4)
+          .populate("item");
 
-      return res.status(200).json({ data: recommendedBids, ok: true });
-    } else {
-      return res.status(400).json({ message: "No Data Found", ok: false });
+        return res.status(200).json({ data: recommendedBids, ok: true });
+      } else {
+        return res.status(400).json({ message: "No Data Found", ok: false });
+      }
+    } catch (err) {
+      console.log(err);
+      return res.status(400).json({ message: err.message, ok: false });
     }
   });
 
@@ -289,12 +299,18 @@ bidRouter.get("/recommended", authValidation, async (req, res) => {
 
 bidRouter.get("/similar/:bidID", async (req, res) => {
   let { bidID } = req.params;
+  let jsonAnalytics = null;
 
-  if (!ObjectId.isValid(bidID))
-    return res.status(404).json({ message: "Bid Not Found", ok: false });
+  try {
+    if (!ObjectId.isValid(bidID))
+      return res.status(404).json({ message: "Bid Not Found", ok: false });
 
-  let analytics = await analyticsModel.find().select({ _id: 0 });
-  let jsonAnalytics = JSON.stringify(analytics);
+    let analytics = await analyticsModel.find().select({ _id: 0 });
+    jsonAnalytics = JSON.stringify(analytics);
+  } catch (err) {
+    console.log(err);
+    return res.status(400).json({ message: err.message, ok: false });
+  }
 
   const pythonProcess = spawn("python", [
     "./recommendation_engine/similar_bids.py",
@@ -303,16 +319,20 @@ bidRouter.get("/similar/:bidID", async (req, res) => {
   ]);
 
   pythonProcess.stdout.on("data", async (data) => {
-    let result = data.toString().trim();
-
-    if (result != "N/F") {
+    try {
+      let result = data.toString().trim();
       let bidIds = result.split(" ");
-      let similarBids = await bidModel
-        .find({ _id: { $in: bidIds } })
-        .populate("item");
-      return res.status(200).json({ data: similarBids, ok: true });
-    } else {
-      return res.status(400).json({ message: "No Data Found", ok: false });
+
+      if (result != "N/F" && bidIds.length > 0) {
+        let similarBids = await bidModel
+          .find({ _id: { $in: bidIds } })
+          .populate("item");
+        return res.status(200).json({ data: similarBids, ok: true });
+      } else
+        return res.status(400).json({ message: "No Data Found", ok: false });
+    } catch (err) {
+      console.log(err);
+      return res.status(400).json({ message: err, ok: false });
     }
   });
 });
