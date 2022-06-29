@@ -8,6 +8,7 @@ const reportRouter = require("./routes/report");
 const adminRouter = require("./routes/admin");
 const { Server } = require("socket.io");
 const { initSocket } = require("./utils/socketConnection");
+const hitIdentifier = require("./middlewares/hitIdentifier");
 
 require("dotenv").config();
 
@@ -30,6 +31,7 @@ mongoose
   .catch((err) => console.log(err));
 
 //enter the tables
+app.use(hitIdentifier);
 app.use("/auth", authRouter);
 app.use("/item", itemRouter);
 app.use("/bid", bidRouter);
