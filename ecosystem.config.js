@@ -3,8 +3,8 @@ module.exports = {
     {
       name: "Bidit",
       script: "./index.js",
-      instances: "max",
-      exec_mode: "cluster",
+      // instances: "max",
+      // exec_mode: "cluster",
       env: {
         NODE_ENV: "development",
       },
