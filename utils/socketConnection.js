@@ -76,12 +76,15 @@ const initSocket = (socket) => {
 };
 
 const getHighestBid = (bid) => {
-  if (bid.bidsHistory.length < 1) return { user: null, price: bid.minPrice };
+  let highestBid = { user: null, price: bid.minPrice };
 
-  let highestBidPrice = bid.minPrice;
+  bid.bidsHistory.forEach((x) => {
+    if (x.price > highestBid.price) {
+      highestBid = x;
+    }
+  });
 
-  if (bid.bidsHistory[0].price > highestBidPrice) return bid.bidsHistory[0];
-  else return highestBidPrice;
+  return highestBid;
 };
 
 const fetchBid = async (bidID, socket) => {
