@@ -108,15 +108,13 @@ const changeBidStatus = async (status, diff, bidID) => {
           });
 
           let newOrder = await orderModel.create({
-            bidID,
+            bid: bidID,
             auctioneer: bid.user._id,
             bidder: highestBid.user,
             price: highestBid.price,
             pickupTime: dayjs().add(2, "d"),
             pickupAddress: bid.user.address,
           });
-
-          console.log(newOrder);
 
           if (newOrder) {
             await sendNotification({
@@ -148,7 +146,7 @@ const changeBidStatus = async (status, diff, bidID) => {
         }
       }
     } catch (err) {
-      res.status(400).json({ message: err.message, ok: false });
+      console.log(err);
     }
   }, diff);
 };
@@ -206,7 +204,7 @@ const reviveServer = async () => {
 
     console.log("Server Successfully Restored");
   } catch (err) {
-    res.status(400).json({ message: err.message, ok: false });
+    console.log(err);
   }
 };
 
