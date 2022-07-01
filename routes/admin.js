@@ -255,11 +255,6 @@ adminRouter.patch(
 
       let order = await orderModel.findById(orderID).populate("bid");
 
-      if (order.status !== "pending")
-        return res
-          .status(400)
-          .json({ message: "Order Cannot be canceled", ok: false });
-
       await orderModel.updateOne({ _id: orderID }, { status: "canceled" });
 
       sendNotification({
@@ -312,7 +307,9 @@ adminRouter.patch(
             en: "Oops. bidder canceled the order and we didn't find a replacement. You can repost the bid again.",
           },
         });
-        return;
+        return res
+          .status(200)
+          .json({ message: "Order Canceled Successfully", ok: true });
       }
 
       let nextOrder = {
@@ -356,6 +353,7 @@ adminRouter.patch(
         .status(200)
         .json({ message: "Order Canceled Successfully", ok: true });
     } catch (err) {
+      console.log(err);
       res.status(400).json({ message: err.message, ok: false });
     }
   }
@@ -366,15 +364,22 @@ adminRouter.delete(
   authValidation,
   isAdmin,
   async (req, res) => {
+    let { user } = res.locals;
     let { orderID } = req.params;
 
     try {
       if (!ObjectId.isValid(orderID))
         return res.status(404).json({ message: "Order Not Found", ok: false });
 
-      let deletedOrder = await orderModel.deleteOne({ _id: orderID });
+      let deletedOrder = await orderModel.findOneAndDelete({ _id: orderID });
 
-      if (deletedOrder.deletedCount > 0) {
+      await logModel.create({
+        admin: user.email,
+        user: deletedOrder.bidder,
+        message: `${user.email} has deleted order ${deletedOrder._id} for ${deletedOrder.bidder}`,
+      });
+
+      if (deletedOrder) {
         res
           .status(200)
           .json({ message: "Order Removed Successfully", ok: true });
@@ -391,6 +396,7 @@ adminRouter.patch(
   authValidation,
   isAdmin,
   async (req, res) => {
+    let { user } = res.locals;
     let { orderID } = req.params;
     let { status } = req.body;
 
@@ -400,9 +406,18 @@ adminRouter.patch(
           .status(200)
           .json({ message: "New status is required", ok: false });
 
-      let order = await orderModel.updateOne({ _id: orderID }, { status });
+      let order = await orderModel.findOneAndUpdate(
+        { _id: orderID },
+        { status }
+      );
 
-      if (order.modifiedCount > 0)
+      await logModel.create({
+        admin: user.email,
+        user: order.bidder,
+        message: `${user.email} has edited order ${order._id} for ${order.bidder}`,
+      });
+
+      if (order)
         return res
           .status(200)
           .json({ message: "Edited Successfully", ok: true });
