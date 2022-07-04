@@ -1,5 +1,7 @@
+/* Destructuring the Schema and model from the mongoose package. */
 const { Schema, model } = require("mongoose");
 
+/* Creating a schema for the notifications model. */
 const notificationSchema = new Schema(
   {
     title: {
@@ -22,6 +24,7 @@ const notificationSchema = new Schema(
   { timestamps: true }
 );
 
+/* Creating a schema for the user model. */
 const userSchema = new Schema(
   {
     name: {
@@ -64,10 +67,6 @@ const userSchema = new Schema(
       min: [8, "User Password should be 8 or more charchters"],
       max: [32, "User Password should be 32 or less charchters"],
     },
-    premium: {
-      type: Object,
-      default: null,
-    },
     isVerified: {
       type: Boolean,
       default: false,
@@ -77,7 +76,9 @@ const userSchema = new Schema(
   { timestamps: true }
 );
 
+/* Creating a text index on all fields in the userSchema. */
 userSchema.index({ "$**": "text" });
 
+/* Creating a model called User and using the userSchema to create it. */
 const userModel = model("User", userSchema);
 module.exports = userModel;

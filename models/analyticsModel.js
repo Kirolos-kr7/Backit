@@ -1,7 +1,7 @@
-const mongoose = require("mongoose"); // connect to db
-const Schema = mongoose.Schema; //build schema
+/* Destructuring the Schema and model from the mongoose package. */
+const { Schema, model } = require("mongoose");
 
-//the form of the schema
+/* This is creating a new schema for the analytics collection. */
 const analyticsSchema = new Schema(
   {
     bidID: { type: String, required: true },
@@ -11,5 +11,6 @@ const analyticsSchema = new Schema(
   { timestamps: true }
 );
 
-const analyticsModel = mongoose.model("Analytics", analyticsSchema);
+/* Creating a new model for the analytics collection. */
+const analyticsModel = model("Analytics", analyticsSchema);
 module.exports = analyticsModel;

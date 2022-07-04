@@ -1,8 +1,7 @@
-const mongoose = require("mongoose"); // connect to db
-const Schema = mongoose.Schema; //build schema
-const ObjectId = mongoose.Types.ObjectId; //build schema
+/* Destructuring the Schema and model from the mongoose package. */
+const { Schema, model } = require("mongoose");
 
-//the form of the schema
+/* Creating a schema for the database. */
 const logSchema = new Schema(
   {
     admin: { type: String, required: true },
@@ -12,7 +11,9 @@ const logSchema = new Schema(
   { timestamps: true }
 );
 
+/* Creating a text index on all fields in the schema. */
 logSchema.index({ "$**": "text" });
 
-const logModel = mongoose.model("Logs", logSchema);
+/* Creating a model called "Logs" using the logSchema. */
+const logModel = model("Logs", logSchema);
 module.exports = logModel;

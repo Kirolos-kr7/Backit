@@ -1,13 +1,15 @@
 /** IMPORTS **/
 const express = require("express");
+const ObjectId = require("mongoose").Types.ObjectId;
 const itemModel = require("../models/itemModel");
 const bidModel = require("../models/bidModel");
 const authValidation = require("../middlewares/authValidation");
-const JOI = require("joi"); //use joi to easier form
+const JOI = require("joi");
 const { v1: uuid } = require("uuid");
 const ImageKit = require("imagekit");
 
 /** INITIALIZATIONS **/
+/* Creating a new instance of the ImageKit class. */
 var imagekit = new ImageKit({
   publicKey: "public_QyIWVOnkYPjl4YXn3PGe3ymGrt4=",
   privateKey: "private_7WVBoOozqMA1E+OUmuJFzGi5KJ0=",
@@ -87,12 +89,11 @@ itemRouter.post("/add", authValidation, async (req, res) => {
 
 //delete item
 itemRouter.delete("/delete/:itemID", authValidation, async (req, res) => {
-  let user = res.locals.user;
   const { itemID } = req.params;
 
-  if (!itemID) {
-    return res.status(400).json({
-      message: "Item Id Is Required",
+  if (!ObjectId.isValid(itemID)) {
+    return res.status(404).json({
+      message: "Item not found",
       ok: false,
     });
   }

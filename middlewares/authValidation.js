@@ -1,5 +1,6 @@
 const jwt = require("jsonwebtoken");
 
+/* A middleware function that is used to validate the user token. */
 authValidation = async (req, res, next) => {
   let authHeader = req.headers.authorization;
   let token = authHeader.split(" ")[1];

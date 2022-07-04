@@ -14,13 +14,15 @@ const ObjectId = require("mongoose").Types.ObjectId;
 const banModel = require("../models/banModel");
 const dayjs = require("dayjs");
 
+/** INITIALIZATIONS **/
+/* Connecting to the Mailjet API. */
 const mailjet = require("node-mailjet").connect(
   "92ac5ce8ae8ae0ff255cd6f5bb46ce69",
   "c9b5277b85ef2c4488014502497429c8"
 );
 
-/** INITIALIZATIONS **/
-var imagekit = new ImageKit({
+/* Creating a new instance of the ImageKit class. */
+const imagekit = new ImageKit({
   publicKey: "public_QyIWVOnkYPjl4YXn3PGe3ymGrt4=",
   privateKey: "private_7WVBoOozqMA1E+OUmuJFzGi5KJ0=",
   urlEndpoint: "https://ik.imagekit.io/bidit",
@@ -650,6 +652,11 @@ authRouter.delete("/delete-profile", authValidation, async (req, res) => {
   }
 });
 
+/**
+ * It creates a token for the user to log in.
+ * @param user - the user object that is returned from the database
+ * @returns A token
+ */
 const createToken = async (user) => {
   // creating a jwt token to log users in
   let token = jwt.sign(

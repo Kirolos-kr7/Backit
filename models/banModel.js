@@ -1,7 +1,7 @@
-const mongoose = require("mongoose");
-const Schema = mongoose.Schema;
+/* Destructuring the Schema and model from the mongoose package. */
+const { Schema, model } = require("mongoose");
 
-//the form of the schema
+/* Creating a new Schema for the bans collection. */
 const banSchema = new Schema(
   {
     user: { type: String, required: true, unique: true },
@@ -13,5 +13,6 @@ const banSchema = new Schema(
   }
 );
 
-const banModel = mongoose.model("Bans", banSchema);
+/* Creating a new model for the bans collection. */
+const banModel = model("Bans", banSchema);
 module.exports = banModel;

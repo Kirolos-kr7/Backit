@@ -1,11 +1,12 @@
-const mongoose = require("mongoose"); // connect to db
-const Schema = mongoose.Schema; //build schema
+/* Destructuring the Schema and model from the mongoose package. */
+const { Schema, model } = require("mongoose");
 
-//the form of the schema
+/* Creating a schema for the token. */
 const tokenSchema = new Schema({
   user: { type: String, required: true },
   createdAt: { type: Date, expires: 7200, default: Date.now },
 });
 
-const tokenModel = mongoose.model("Tokens", tokenSchema);
+/* Creating a model for the token schema. */
+const tokenModel = model("Tokens", tokenSchema);
 module.exports = tokenModel;

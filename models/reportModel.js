@@ -1,6 +1,6 @@
 const { Schema, Types, model } = require("mongoose"); // connect to db
 
-//the form of the schema
+/* Creating a schema for the report model. */
 const reportSchema = new Schema(
   {
     reporter: { type: Types.ObjectId, ref: "User", required: true },
@@ -24,7 +24,9 @@ const reportSchema = new Schema(
   { timestamps: true }
 );
 
+/* Creating a text index on all fields in the schema. */
 reportSchema.index({ "$**": "text" });
 
+/* Creating a model called Report and using the reportSchema to create it. */
 const reportModel = model("Report", reportSchema);
 module.exports = reportModel;

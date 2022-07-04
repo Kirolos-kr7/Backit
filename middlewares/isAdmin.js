@@ -1,3 +1,4 @@
+/* A middleware function that checks if the user is an admin. */
 isAdmin = async (req, res, next) => {
   let { user } = res.locals;
 

@@ -1,16 +1,10 @@
 const express = require("express");
-const reportModel = require("../models/reportModel"); //import to reportModel
-const authValidation = require("../middlewares/authValidation"); //import to validation in middlewares
-const { v4: uuidv4 } = require("uuid"); // build unique id
-const JOI = require("joi"); //use joi to easier form
-const userModel = require("../models/userModel");
-const banModel = require("../models/banModel");
-const bidModel = require("../models/bidModel");
-const logModel = require("../models/logModel");
+const reportModel = require("../models/reportModel");
+const authValidation = require("../middlewares/authValidation");
+const JOI = require("joi");
 
 const reportRouter = express.Router();
 
-//identify the requests of every thing
 const reportSchema = JOI.object({
   reporter: JOI.string(),
   for: JOI.string(),

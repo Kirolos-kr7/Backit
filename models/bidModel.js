@@ -1,11 +1,11 @@
-const mongoose = require("mongoose"); // connect to db
-const Schema = mongoose.Schema; //build schema
+/* Destructuring the Schema and model from the mongoose package. */
+const { Schema, model, Types } = require("mongoose");
 
-//the form of the schema
+/* Creating a schema for the bid model. */
 const bidSchema = new Schema(
   {
-    item: { type: Schema.Types.ObjectId, ref: "Item", required: true },
-    user: { type: Schema.Types.ObjectId, ref: "User", required: true },
+    item: { type: Types.ObjectId, ref: "Item", required: true },
+    user: { type: Types.ObjectId, ref: "User", required: true },
     minPrice: {
       type: Number,
       required: true,
@@ -30,7 +30,9 @@ const bidSchema = new Schema(
   { timestamps: true }
 );
 
+/* Creating a text index on all fields in the bidSchema. */
 bidSchema.index({ "$**": "text" });
 
-const bidModel = mongoose.model("Bid", bidSchema);
+/* Creating a model called Bid from the bidSchema. */
+const bidModel = model("Bid", bidSchema);
 module.exports = bidModel;

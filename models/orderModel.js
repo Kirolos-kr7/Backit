@@ -1,5 +1,7 @@
+/* Destructuring the mongoose module. */
 const { Schema, model, Types } = require("mongoose");
 
+/* Creating a schema for the order model. */
 const orderSchema = new Schema(
   {
     bid: { type: Types.ObjectId, ref: "Bid", required: true },
@@ -41,7 +43,9 @@ const orderSchema = new Schema(
   { timestamps: true }
 );
 
+/* Creating a text index on all fields in the schema. */
 orderSchema.index({ "$**": "text" });
 
+/* Creating a model called "Order" based on the orderSchema. */
 const orderModel = model("Order", orderSchema);
 module.exports = orderModel;
