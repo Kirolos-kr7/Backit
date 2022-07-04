@@ -8,6 +8,7 @@ const ObjectId = require("mongoose").Types.ObjectId;
 
 const orderRouter = express.Router();
 
+/* A validation schema for the order object. */
 const orderSchema = JOI.object({
   status: JOI.string().required(),
   paymentMethod: JOI.string().required(),
@@ -19,9 +20,11 @@ const orderSchema = JOI.object({
 orderRouter.patch("/activate/:orderID", authValidation, async (req, res) => {
   let { orderID } = req.params;
 
+  /* Checking if the orderID is valid or not. */
   if (!ObjectId.isValid(orderID))
     return res.status(404).json({ message: "Order Not Found", ok: false });
 
+  /* Creating an object with the properties of the order. */
   let order = {
     paymentMethod: req.body.paymentMethod,
     arrivalAddress: req.body.arrivalAddress,
@@ -30,6 +33,7 @@ orderRouter.patch("/activate/:orderID", authValidation, async (req, res) => {
     shipping: 10,
   };
 
+  /* Validating the order object. */
   try {
     await orderSchema.validateAsync(order);
   } catch (err) {
@@ -40,8 +44,10 @@ orderRouter.patch("/activate/:orderID", authValidation, async (req, res) => {
   }
 
   try {
+    /* Updating the order with the new data. */
     let thisOrder = await orderModel.updateOne({ _id: orderID }, order);
 
+    /* Checking if the order was modified or not. */
     if (thisOrder.modifiedCount > 0)
       return res
         .status(200)
@@ -55,26 +61,33 @@ orderRouter.patch("/cancel/:orderID", authValidation, async (req, res) => {
   let { user } = res.locals;
   let { orderID } = req.params;
 
+  /* Checking if the orderID is valid or not. */
   if (!ObjectId.isValid(orderID))
     return res.status(404).json({ message: "Order Not Found", ok: false });
 
   try {
+    /* Finding the order by the id. */
     let order = await orderModel.findById(orderID);
 
+    /* Checking if the user is the auctioneer or not. */
     if (user.id !== order.auctioneer.toString())
       return res.status(403).json({ message: "Forbidden", ok: false });
 
+    /* Checking if the order status is pending or not. */
     if (order.status !== "pending")
       return res
         .status(400)
         .json({ message: "Order Cannot be canceled", ok: false });
 
+    /* Updating the order status to canceled. */
     let updatedOrder = await orderModel.updateOne(
       { _id: orderID },
       { status: "canceled" }
     );
 
+    /* Checking if the order was modified or not. */
     if (updatedOrder.modifiedCount > 0)
+      /* Sending a notification to the bidder that the auctioneer has canceled the order. */
       sendNotification({
         userID: order.bidder,
         title: {
@@ -88,6 +101,7 @@ orderRouter.patch("/cancel/:orderID", authValidation, async (req, res) => {
         redirect: `/account/order/${order._id}`,
       });
 
+    /* Sending a notification to the auctioneer. */
     sendNotification({
       userID: order.auctioneer,
       title: {
@@ -113,22 +127,28 @@ orderRouter.patch("/retract/:orderID", authValidation, async (req, res) => {
   let { user } = res.locals;
   let { orderID } = req.params;
 
+  /* Checking if the orderID is valid or not. */
   if (!ObjectId.isValid(orderID))
     return res.status(404).json({ message: "Order Not Found", ok: false });
 
   try {
+    /* Finding the order by the id and populating the bid field. */
     let order = await orderModel.findById(orderID).populate("bid");
 
+    /* Checking if the user is the bidder or not. */
     if (user.id !== order.bidder.toString())
       return res.status(403).json({ message: "Forbidden", ok: false });
 
+    /* Checking if the order status is pending or not. */
     if (order.status !== "pending")
       return res
         .status(400)
         .json({ message: "Order Cannot be canceled", ok: false });
 
+    /* Updating the order status to canceled. */
     await orderModel.updateOne({ _id: orderID }, { status: "canceled" });
 
+    /* Sending a notification to the bidder that the auctioneer has canceled the order. */
     sendNotification({
       userID: order.bidder,
       title: {
@@ -142,11 +162,13 @@ orderRouter.patch("/retract/:orderID", authValidation, async (req, res) => {
       redirect: `/account/order/${order._id}`,
     });
 
+    /* Sending a response to the client. */
     res.status(200).json({ message: "Order Canceled Successfully", ok: true });
 
     let nextBid = {};
     let bidsHistory = order.bid.bidsHistory.reverse();
 
+    /* Finding all the canceled orders for the current bid. */
     let canceledOrdersForCurrentBid = await orderModel
       .find({
         bid: order.bid,
@@ -154,16 +176,20 @@ orderRouter.patch("/retract/:orderID", authValidation, async (req, res) => {
       })
       .select("bidder price");
 
+    /* Mapping the bidder id to a string. */
     let rejectedUsers = canceledOrdersForCurrentBid.map((order) =>
       order.bidder.toString()
     );
 
+    /* Filtering the bidsHistory array to get the users that are not in the rejectedUsers array. */
     let eligableUsers = bidsHistory.filter(
       (bid) => !rejectedUsers.includes(bid.user)
     );
 
     nextBid = eligableUsers[0];
 
+    /* Sending a notification to the auctioneer that the bidder canceled the order and there is no
+    replacement. */
     if (!nextBid) {
       sendNotification({
         userID: order.auctioneer,
@@ -179,6 +205,7 @@ orderRouter.patch("/retract/:orderID", authValidation, async (req, res) => {
       return;
     }
 
+    /* Creating an object with the properties of the order. */
     let nextOrder = {
       bid: order.bid,
       auctioneer: order.auctioneer,
@@ -188,8 +215,10 @@ orderRouter.patch("/retract/:orderID", authValidation, async (req, res) => {
       pickupAddress: order.pickupAddress,
     };
 
+    /* Creating an object with the properties of the order. */
     let newOrder = await orderModel.create(nextOrder);
 
+    /* Sending a notification to the auctioneer that the bidder canceled the order and there is a replacement. */
     sendNotification({
       userID: order.auctioneer,
       title: {
@@ -203,6 +232,7 @@ orderRouter.patch("/retract/:orderID", authValidation, async (req, res) => {
       redirect: `/account/order/${newOrder._id}`,
     });
 
+    /* Sending a notification to the bidder that he won the bid. */
     await sendNotification({
       userID: nextBid.user,
       title: {
@@ -225,10 +255,12 @@ orderRouter.get("/user", authValidation, async (req, res) => {
   let { limit = 0, skip = 0 } = req.query;
 
   try {
+    /* Counting the number of orders that the user has. */
     let count = await orderModel.count({
       $or: [{ bidder: user.id }, { auctioneer: user.id }],
     });
 
+    /* A query to get all the orders that the user has. */
     let orders = await orderModel
       .find({
         $or: [{ bidder: user.id }, { auctioneer: user.id }],
@@ -247,6 +279,7 @@ orderRouter.get("/user", authValidation, async (req, res) => {
         },
       });
 
+    /* Returning the orders and the count of the orders. */
     return res.status(200).json({ data: { orders, count }, ok: true });
   } catch (err) {
     res.status(400).json({ message: err.message, ok: false });
@@ -257,10 +290,12 @@ orderRouter.get("/:orderID", authValidation, async (req, res) => {
   let { user } = res.locals;
   let { orderID } = req.params;
 
+  /* Checking if the orderID is valid or not. */
   if (!ObjectId.isValid(orderID))
     return res.status(404).json({ message: "Incorrect order id", ok: false });
 
   try {
+    /* Finding the order by the id and populating the bid field. */
     let order = await orderModel
       .findOne({
         _id: orderID,
@@ -277,6 +312,7 @@ orderRouter.get("/:orderID", authValidation, async (req, res) => {
         },
       });
 
+    /* Checking if the order exists or not. If it exists, it will return the order. */
     if (order) return res.status(200).json({ data: order, ok: true });
     return res
       .status(400)

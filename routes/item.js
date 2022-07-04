@@ -33,11 +33,13 @@ itemRouter.post("/add", authValidation, async (req, res) => {
   let user = res.locals.user;
   let { images } = req.body;
 
+  /* This is a validation to check if the user has uploaded at least one image. */
   if (images.length === 0)
     return res
       .status(400)
       .json({ message: "Atleast one image is required", ok: false });
 
+  /* Creating an object with the name, type, description and uID. */
   let item = {
     name: req.body.name,
     type: req.body.type,
@@ -45,6 +47,7 @@ itemRouter.post("/add", authValidation, async (req, res) => {
     uID: user.id,
   };
 
+  /* Validating item. */
   try {
     await itemSchema.validateAsync(item);
   } catch (err) {
@@ -55,8 +58,10 @@ itemRouter.post("/add", authValidation, async (req, res) => {
   }
 
   try {
+    /* Creating a new item in the database. */
     let newItem = await itemModel.create(item);
 
+    /* This is a forEach loop that is used to upload the images to the imagekit server. */
     if (newItem) {
       images.forEach(async (image, index) => {
         let uniqueID = uuid();
@@ -91,6 +96,7 @@ itemRouter.post("/add", authValidation, async (req, res) => {
 itemRouter.delete("/delete/:itemID", authValidation, async (req, res) => {
   const { itemID } = req.params;
 
+  /* This is a validation to check if the itemID is valid or not. */
   if (!ObjectId.isValid(itemID)) {
     return res.status(404).json({
       message: "Item not found",
